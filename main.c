@@ -1,42 +1,4 @@
-/**
- * Copyright (c) 2014 - 2021, Nordic Semiconductor ASA
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form, except as embedded into a Nordic
- *    Semiconductor ASA integrated circuit in a product or a software update for
- *    such product, must reproduce the above copyright notice, this list of
- *    conditions and the following disclaimer in the documentation and/or other
- *    materials provided with the distribution.
- *
- * 3. Neither the name of Nordic Semiconductor ASA nor the names of its
- *    contributors may be used to endorse or promote products derived from this
- *    software without specific prior written permission.
- *
- * 4. This software, with or without modification, must only be used with a
- *    Nordic Semiconductor ASA integrated circuit.
- *
- * 5. Any software provided in binary form under this license must not be reverse
- *    engineered, decompiled, modified and/or disassembled.
- *
- * THIS SOFTWARE IS PROVIDED BY NORDIC SEMICONDUCTOR ASA "AS IS" AND ANY EXPRESS
- * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL NORDIC SEMICONDUCTOR ASA OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+
 /** @file
  *
  * @defgroup blinky_example_main main.c
@@ -53,7 +15,103 @@
 #include "nrf_delay.h"
 #include "boards.h"
 
+#define LED_Y NRF_GPIO_PIN_MAP(0, 6)
+#define LED_R NRF_GPIO_PIN_MAP(0, 8)
+#define LED_G NRF_GPIO_PIN_MAP(1, 9)
+#define LED_B NRF_GPIO_PIN_MAP(0, 12)
+
+#define BUTTON NRF_GPIO_PIN_MAP(1, 6)
+
+static const uint32_t leds_list[LEDS_NUMBER] = {LED_Y, LED_R, LED_G, LED_B};
+
 static const unsigned int device_id[LEDS_NUMBER] = {6, 5, 7, 7};
+
+/**
+ * @brief Function to 
+ * 
+ * @param pin 
+ */
+void config_pin_as_led(uint32_t pin)
+{
+    nrf_gpio_cfg(pin, 
+                 GPIO_PIN_CNF_DIR_Output, 
+                 GPIO_PIN_CNF_INPUT_Disconnect,
+                 GPIO_PIN_CNF_PULL_Pullup,
+                 GPIO_PIN_CNF_DRIVE_S0S1,
+                 GPIO_PIN_CNF_SENSE_Disabled
+                );
+}
+
+/**
+ * @brief Function to 
+ * 
+ * @param pin 
+ */
+void config_pin_as_button(uint32_t pin)
+{
+    nrf_gpio_cfg(pin, 
+                 GPIO_PIN_CNF_DIR_Input, 
+                 GPIO_PIN_CNF_INPUT_Connect,
+                 GPIO_PIN_CNF_PULL_Pullup,
+                 GPIO_PIN_CNF_DRIVE_S0S1,
+                 GPIO_PIN_CNF_SENSE_Low
+                );
+}
+
+/**
+ * @brief Function to 
+ * 
+ * @param pin 
+ */
+void led_on(uint32_t pin)
+{
+    nrf_gpio_pin_clear(pin);
+}
+
+/**
+ * @brief Function to 
+ * 
+ * @param pin 
+ */
+void led_off(uint32_t pin)
+{
+    nrf_gpio_pin_set(pin);
+}
+
+/**
+ * @brief Function to 
+ * 
+ */
+void all_leds_off(void)
+{
+    for(unsigned int i = 0; i < LEDS_NUMBER; i++) {
+        led_off(leds_list[i]);
+    }
+}
+
+/**
+ * @brief Function to 
+ * 
+ * @param pin 
+ * @return true 
+ * @return false 
+ */
+bool button_is_pressed(uint32_t pin)
+{
+    return (!nrf_gpio_pin_read(pin));
+}
+
+/**
+ * @brief Function to 
+ * 
+ * @param pin 
+ * @return true 
+ * @return false 
+ */
+bool button_is_released(uint32_t pin)
+{
+    return (nrf_gpio_pin_read(pin));
+}
 
 /**
  * @brief Function to blink led set number of times with required width
@@ -65,8 +123,17 @@ static const unsigned int device_id[LEDS_NUMBER] = {6, 5, 7, 7};
 static void blink_num_times(uint32_t led_idx , uint32_t num, uint32_t width)
 {
     for(unsigned int i = 0; i < num; i++){
-        bsp_board_led_on(led_idx);
+        while(button_is_released(BUTTON)) {
+            ;
+        }
+
+        led_on(leds_list[led_idx]);
         nrf_delay_ms(width);
+
+        while(button_is_released(BUTTON)) {
+            ;
+        }
+
         bsp_board_led_off(led_idx);
         nrf_delay_ms(width);
     }
@@ -77,13 +144,17 @@ static void blink_num_times(uint32_t led_idx , uint32_t num, uint32_t width)
  */
 int main(void)
 {
-    /* Configure board. */
-    bsp_board_init(BSP_INIT_LEDS);
+    config_pin_as_led(LED_Y);
+    config_pin_as_led(LED_R);
+    config_pin_as_led(LED_G);
+    config_pin_as_led(LED_B);
+    config_pin_as_button(BUTTON);
 
-    /* Toggle LEDs. */
-    while (true)
-    {
-        bsp_board_leds_off();
+    // bsp_board_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS);
+    all_leds_off();
+
+    while(true) {
+
         for (int i = 0; i < LEDS_NUMBER; i++)
         {
             blink_num_times(i, device_id[i], 500);
