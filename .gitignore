@@ -1,2 +1,2 @@
 *.o
-armgcc/_build/*
+_build/*

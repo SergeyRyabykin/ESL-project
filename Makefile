@@ -5,11 +5,11 @@ DFU_PACKAGE      := $(OUTPUT_DIRECTORY)/nrf52840_xxaa.dfu
 DFU_PORT         ?= /dev/ttyACM0
 
 
-SDK_ROOT ?= ../../devel/esl-nsdk
-PROJ_DIR := ..
+SDK_ROOT ?= /home/user/devel/esl-nsdk
+PROJ_DIR := .
 
 $(OUTPUT_DIRECTORY)/nrf52840_xxaa.out: \
-  LINKER_SCRIPT  := blinky_gcc_nrf52.ld
+  LINKER_SCRIPT  := $(PROJ_DIR)/ld/blinky_gcc_nrf52.ld
 
 # Source files common to all targets
 SRC_FILES += \
@@ -32,17 +32,18 @@ SRC_FILES += \
   $(SDK_ROOT)/modules/nrfx/soc/nrfx_atomic.c \
   $(PROJ_DIR)/main.c \
   $(SDK_ROOT)/modules/nrfx/mdk/system_nrf52840.c \
+  $(wildcard $(PROJ_DIR)/src/*.c) \
 
 # Include folders common to all targets
 INC_FOLDERS += \
   $(SDK_ROOT)/components \
   $(SDK_ROOT)/modules/nrfx/mdk \
   $(PROJ_DIR) \
+  $(PROJ_DIR)/config \
   $(SDK_ROOT)/components/softdevice/mbr/headers \
   $(SDK_ROOT)/components/libraries/strerror \
   $(SDK_ROOT)/components/toolchain/cmsis/include \
   $(SDK_ROOT)/components/libraries/util \
-  ../config \
   $(SDK_ROOT)/components/libraries/balloc \
   $(SDK_ROOT)/components/libraries/ringbuf \
   $(SDK_ROOT)/modules/nrfx/hal \
@@ -58,6 +59,7 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/libraries/memobj \
   $(SDK_ROOT)/external/fprintf \
   $(SDK_ROOT)/components/libraries/log/src \
+  $(PROJ_DIR)/inc \
 
 # Libraries common to all targets
 LIB_FILES += \
