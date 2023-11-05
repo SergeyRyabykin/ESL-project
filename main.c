@@ -1,15 +1,4 @@
 
-/** @file
- *
- * @defgroup blinky_example_main main.c
- * @{
- * @ingroup blinky_example
- * @brief Blinky Example Application main file.
- *
- * This file contains the source code for a sample application to blink LEDs.
- *
- */
-
 #include <stdbool.h>
 #include <stdint.h>
 #include "nrf_delay.h"
@@ -26,11 +15,6 @@ static const uint32_t leds_list[LEDS_NUMBER] = {LED_Y, LED_R, LED_G, LED_B};
 
 static const unsigned int device_id[LEDS_NUMBER] = {6, 5, 7, 7};
 
-/**
- * @brief Function to 
- * 
- * @param pin 
- */
 void config_pin_as_led(uint32_t pin)
 {
     nrf_gpio_cfg(pin, 
@@ -42,11 +26,6 @@ void config_pin_as_led(uint32_t pin)
                 );
 }
 
-/**
- * @brief Function to 
- * 
- * @param pin 
- */
 void config_pin_as_button(uint32_t pin)
 {
     nrf_gpio_cfg(pin, 
@@ -58,30 +37,16 @@ void config_pin_as_button(uint32_t pin)
                 );
 }
 
-/**
- * @brief Function to 
- * 
- * @param pin 
- */
 void led_on(uint32_t pin)
 {
     nrf_gpio_pin_clear(pin);
 }
 
-/**
- * @brief Function to 
- * 
- * @param pin 
- */
 void led_off(uint32_t pin)
 {
     nrf_gpio_pin_set(pin);
 }
 
-/**
- * @brief Function to 
- * 
- */
 void all_leds_off(void)
 {
     for(unsigned int i = 0; i < LEDS_NUMBER; i++) {
@@ -89,25 +54,11 @@ void all_leds_off(void)
     }
 }
 
-/**
- * @brief Function to 
- * 
- * @param pin 
- * @return true 
- * @return false 
- */
 bool button_is_pressed(uint32_t pin)
 {
     return (!nrf_gpio_pin_read(pin));
 }
 
-/**
- * @brief Function to 
- * 
- * @param pin 
- * @return true 
- * @return false 
- */
 bool button_is_released(uint32_t pin)
 {
     return (nrf_gpio_pin_read(pin));
@@ -139,9 +90,7 @@ static void blink_num_times(uint32_t led_idx , uint32_t num, uint32_t width)
     }
 }
 
-/**
- * @brief Function for application main entry.
- */
+
 int main(void)
 {
     config_pin_as_led(LED_Y);
@@ -150,7 +99,6 @@ int main(void)
     config_pin_as_led(LED_B);
     config_pin_as_button(BUTTON);
 
-    // bsp_board_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS);
     all_leds_off();
 
     while(true) {
@@ -163,6 +111,3 @@ int main(void)
     }
 }
 
-/**
- *@}
- **/
