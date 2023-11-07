@@ -11,6 +11,14 @@ void config_pin_as_led(uint32_t pin)
                 );
 }
 
+void config_pins_as_leds(unsigned int num, const uint32_t pins[num]) 
+{
+    for(unsigned int i = 0; i < num; i++) {
+        config_pin_as_led(pins[i]);
+    }
+}
+
+
 void led_on(uint32_t pin)
 {
     nrf_gpio_pin_clear(pin);
