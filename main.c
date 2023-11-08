@@ -8,34 +8,58 @@
 #include "app_timer.h"
 #include "nrfx_gpiote.h"
 
+
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
+#include "nrf_log_default_backends.h"
+#include "nrf_log_backend_usb.h"
+
 #include "custom_leds.h"
 #include "custom_buttons.h"
 #include "custom_blink.h"
 
-
 #define PERIOD 1000
+#define DEBOUNCE_TIME_MS 10
 
 static const unsigned int device_id[] = {6, 5, 7, 7};
 static const uint32_t leds_list[] = CUSTOM_LEDS_LIST;
 
-volatile bool blink_enable = true;
-APP_TIMER_DEF(custom_timer);
+_Static_assert(sizeof(device_id)/sizeof(*device_id) <= sizeof(leds_list)/sizeof(*leds_list), "The number of digits in ID exceeds the number of leds!");
 
 
-void custom_timer_timeout_handler(void *context)
+static volatile bool blink_enable = true;
+APP_TIMER_DEF(debounce_timer);
+
+static volatile unsigned int click_num = 0;
+
+
+void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info)
 {
-    led_on(LED_Y);
+    led_on(LED_R);
+}
+
+
+void custom_debounce_timer_timeout_handler(void *context)
+{
+    if(!nrfx_gpiote_in_is_set(BUTTON)) {
+        click_num++;
+    }
+
+    if(2 <= click_num) {
+        blink_enable = !blink_enable;
+        click_num = 0;
+    }
 }
 
 void custom_buttom_toggle_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
-    blink_enable = !blink_enable;
+    APP_ERROR_CHECK(app_timer_start(debounce_timer, APP_TIMER_TICKS(DEBOUNCE_TIME_MS), NULL));
 }
 
 int main(void)
 {
-    _Static_assert(sizeof(device_id)/sizeof(*device_id) <= sizeof(leds_list)/sizeof(*leds_list), "The number of digits in ID exceeds the number of leds!");
-    
+    uint32_t ret = 0;
+
     config_pins_as_leds(sizeof(leds_list)/sizeof(*leds_list), leds_list);
     all_leds_off(sizeof(leds_list)/sizeof(*leds_list), leds_list);
 
@@ -45,34 +69,28 @@ int main(void)
     nrfx_systick_init();
 
     // RTC initialization
-    if(NRF_SUCCESS != app_timer_init()) {
-        // TODO: Organize LOG out of error
-        led_on(LED_R);
-    }
+    ret = app_timer_init();
+    APP_ERROR_CHECK(ret);
 
-
-    if(NRF_SUCCESS != app_timer_create(&custom_timer, APP_TIMER_MODE_REPEATED, custom_timer_timeout_handler)) {
-    // if(NRF_SUCCESS != app_timer_create(&custom_timer, APP_TIMER_MODE_SINGLE_SHOT, custom_timer_timeout_handler)) {
-        // TODO: Organize LOG out of error
-        led_on(LED_R);
-    }
-
-    if(NRF_SUCCESS != app_timer_start(custom_timer, APP_TIMER_TICKS(700), &(void *){NULL})) {
-        // TODO: Organize LOG out of error
-        led_on(LED_R);
-    }
+    // Debounce timer creation
+    ret = app_timer_create(&debounce_timer, APP_TIMER_MODE_SINGLE_SHOT, custom_debounce_timer_timeout_handler);
+    APP_ERROR_CHECK(ret);
 
     // GPIOTE initialization
     if(!nrfx_gpiote_is_init()) {
-        if(NRFX_SUCCESS != nrfx_gpiote_init()) {
-            ; // TODO: Organize LOG out of error
-        }
+        ret = nrfx_gpiote_init();
+        APP_ERROR_CHECK(ret);
     }
 
-    nrfx_gpiote_in_init(BUTTON, &(nrfx_gpiote_in_config_t)NRFX_GPIOTE_CONFIG_IN_SENSE_TOGGLE(true), custom_buttom_toggle_handler);
+    ret = nrfx_gpiote_in_init(BUTTON, &(nrfx_gpiote_in_config_t)NRFX_GPIOTE_CONFIG_IN_SENSE_TOGGLE(true), custom_buttom_toggle_handler);
+    APP_ERROR_CHECK(ret);
+
     nrfx_gpiote_in_event_enable(BUTTON, true);
 
-    
+    // Log initialization
+    NRF_LOG_INIT(NULL);
+    NRF_LOG_DEFAULT_BACKENDS_INIT();
+
     while(true) {
         for (int i = 0; i < sizeof(device_id)/sizeof(*device_id); i++)
         {

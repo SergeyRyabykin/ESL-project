@@ -14,25 +14,25 @@
 // TODO: Think about defence of the enable pointer from value changing
 void led_blocked_single_smooth_blink(uint32_t led, uint32_t duration_ms, volatile bool * enable)
 {
-    // TODO: Have a closer look on the dut_cycle_step calculation because of deviding on 2 the duration.
     uint32_t num_shots = (duration_ms * 1000) / (2 * BLINK_PERIOD_US); // times
     uint32_t duty_cycle_step = BLINK_PERIOD_US / num_shots; // us
-    int32_t current_duty_cycle = duty_cycle_step; //us
+    int32_t current_duty_cycle = 0; //us
 
     bool forward_direction = true;
 
     nrfx_systick_state_t state;
 
-    while(0 <= current_duty_cycle) {
+    do {
 
-        led_on(led);
+        if(0 < current_duty_cycle){
+            led_on(led);
+        }
         nrfx_systick_get(&state);
         while(!nrfx_systick_test(&state, current_duty_cycle)) {
             ;
         }
         led_off(led);
         nrfx_systick_get(&state);
-        // TODO: Think about if current_duty_cycle is more then BLINK_PERIOD_US
         while(!nrfx_systick_test(&state, (BLINK_PERIOD_US - current_duty_cycle))) {
             ;
         }
@@ -50,8 +50,12 @@ void led_blocked_single_smooth_blink(uint32_t led, uint32_t duration_ms, volatil
             else {
                 current_duty_cycle -= duty_cycle_step;
             }
+
+            if(0 >= current_duty_cycle) {
+                break;
+            }
         }
-    }
+    } while(true);
 }
 
 /**
