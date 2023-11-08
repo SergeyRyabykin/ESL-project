@@ -11,8 +11,10 @@
  * @param[in] duration_ms Duration in ms
  * @param[in] enable Flag to enable blink going on
  */
+// TODO: Think about defence of the enable pointer from value changing
 void led_blocked_single_smooth_blink(uint32_t led, uint32_t duration_ms, volatile bool * enable)
 {
+    // TODO: Have a closer look on the dut_cycle_step calculation because of deviding on 2 the duration.
     uint32_t num_shots = (duration_ms * 1000) / (2 * BLINK_PERIOD_US); // times
     uint32_t duty_cycle_step = BLINK_PERIOD_US / num_shots; // us
     int32_t current_duty_cycle = duty_cycle_step; //us
