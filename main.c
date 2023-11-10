@@ -25,7 +25,7 @@
 static const unsigned int device_id[] = {6, 5, 7, 7};
 static const uint32_t leds_list[] = CUSTOM_LEDS_LIST;
 
-_Static_assert(sizeof(device_id)/sizeof(*device_id) <= sizeof(leds_list)/sizeof(*leds_list), "The number of digits in ID exceeds the number of leds!");
+_Static_assert(ARRAY_SIZE(device_id) <= ARRAY_SIZE(leds_list), "The number of digits in ID exceeds the number of leds!");
 
 static volatile unsigned int click_num = 0;
 static volatile bool blink_enable = true;
@@ -77,7 +77,7 @@ void blink_leds_according_to_id(uint32_t period, bool enable)
             is_blinking = false;
             led_idx++;
 
-            if(led_idx >= sizeof(leds_list)/sizeof(*leds_list)) {
+            if(led_idx >= ARRAY_SIZE(leds_list)) {
                 led_idx = 0;
             }
         }
@@ -92,8 +92,8 @@ int main(void)
 {
     uint32_t ret = 0;
 
-    config_pins_as_leds(sizeof(leds_list)/sizeof(*leds_list), leds_list);
-    all_leds_off(sizeof(leds_list)/sizeof(*leds_list), leds_list);
+    config_pins_as_leds(ARRAY_SIZE(leds_list), leds_list);
+    all_leds_off(ARRAY_SIZE(leds_list), leds_list);
 
     config_pin_as_button(BUTTON);
 
