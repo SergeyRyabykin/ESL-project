@@ -29,9 +29,26 @@ void led_off(uint32_t pin)
     nrf_gpio_pin_set(pin);
 }
 
+void led_toggle(uint32_t pin)
+{
+    nrf_gpio_pin_toggle(pin);
+}
+
 void all_leds_off(unsigned int num, const uint32_t leds[num])
 {
     for(unsigned int i = 0; i < num; i++) {
         led_off(leds[i]);
     }
+}
+
+/**
+ * @brief Function to get led status
+ * 
+ * @param pin Pin of led
+ * @return true If led is turned on
+ * @return false If led is turned off
+ */
+bool led_is_on(uint32_t pin)
+{
+    return(!nrf_gpio_pin_out_read(pin));
 }

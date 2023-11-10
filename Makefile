@@ -34,6 +34,30 @@ SRC_FILES += \
   $(SDK_ROOT)/modules/nrfx/mdk/system_nrf52840.c \
   $(wildcard $(PROJ_DIR)/src/*.c) \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_systick.c \
+  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_gpiote.c \
+  $(SDK_ROOT)/components/libraries/timer/app_timer2.c \
+  $(SDK_ROOT)/components/libraries/timer/drv_rtc.c \
+  $(SDK_ROOT)/components/libraries/sortlist/nrf_sortlist.c \
+  $(SDK_ROOT)/components/libraries/atomic_fifo/nrf_atfifo.c \
+  $(SDK_ROOT)/components/libraries/scheduler/app_scheduler.c \
+  $(SDK_ROOT)/components/libraries/log/src/nrf_log_frontend.c \
+  $(SDK_ROOT)/components/libraries/log/src/nrf_log_str_formatter.c \
+  $(SDK_ROOT)/components/libraries/log/src/nrf_log_default_backends.c \
+  $(SDK_ROOT)/components/libraries/log/src/nrf_log_backend_usb.c \
+  $(SDK_ROOT)/components/libraries/usbd/app_usbd.c \
+  $(SDK_ROOT)/integration/nrfx/legacy/nrf_drv_clock.c \
+  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_usbd.c \
+  $(SDK_ROOT)/components/libraries/usbd/app_usbd_core.c \
+  $(SDK_ROOT)/components/libraries/usbd/app_usbd_string_desc.c \
+  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_clock.c \
+  $(SDK_ROOT)/components/libraries/log/src/nrf_log_backend_serial.c \
+  $(SDK_ROOT)/components/libraries/usbd/class/cdc/acm/app_usbd_cdc_acm.c \
+  $(SDK_ROOT)/components/libraries/usbd/app_usbd_serial_num.c \
+  $(SDK_ROOT)/integration/nrfx/legacy/nrf_drv_power.c \
+  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_power.c \
+
+
+
 
 # Include folders common to all targets
 INC_FOLDERS += \
@@ -62,6 +86,17 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/libraries/log/src \
   $(PROJ_DIR)/inc \
   $(SDK_ROOT)/modules/nrfx/drivers/include \
+  $(SDK_ROOT)/components/libraries/timer \
+  $(SDK_ROOT)/components/libraries/sortlist \
+  $(SDK_ROOT)/components/libraries/atomic_fifo \
+  $(SDK_ROOT)/components/libraries/scheduler \
+  $(SDK_ROOT)/components/libraries/log \
+  $(SDK_ROOT)/integration/nrfx/legacy \
+  $(SDK_ROOT)/components/libraries/usbd \
+  $(SDK_ROOT)/components/libraries/usbd/class/cdc \
+  $(SDK_ROOT)/components/libraries/usbd/class/cdc/acm \
+  $(SDK_ROOT)/external/utf_converter \
+  
 
 # Libraries common to all targets
 LIB_FILES += \
@@ -90,6 +125,8 @@ CFLAGS += -fno-builtin -fshort-enums
 CFLAGS += -DAPP_TIMER_V2
 CFLAGS += -DAPP_TIMER_V2_RTC1_ENABLED
 CFLAGS += -DNRFX_SYSTICK_ENABLED
+CFLAGS += -DUSE_APP_CONFIG
+
 
 
 # C++ flags common to all targets
@@ -105,6 +142,8 @@ ASMFLAGS += -DCONFIG_GPIO_AS_PINRESET
 ASMFLAGS += -DFLOAT_ABI_HARD
 ASMFLAGS += -DMBR_PRESENT
 ASMFLAGS += -DNRF52840_XXAA
+ASMFLAGS += -DAPP_TIMER_V2
+ASMFLAGS += -DAPP_TIMER_V2_RTC1_ENABLED
 
 # Linker flags
 LDFLAGS += $(OPT)
