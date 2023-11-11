@@ -30,7 +30,7 @@ bool is_time_expired(uint32_t time_ms)
 }
 
 /**
- * @brief Function to make a single smooth blink
+ * @brief Function to make a single smooth blink. The function is blocking.
  * 
  * @param[in] led Led to blink
  * @param[in] duration_ms Duration in ms
@@ -83,7 +83,7 @@ void led_blocked_single_smooth_blink(uint32_t led, uint32_t duration_ms, volatil
 }
 
 /**
- * @brief Function to make single smooth blink with led
+ * @brief Function to make single smooth blink with led. The function is not bloking
  * 
  * @param[in] led Led to blink
  * @param[in] duration_ms Duration of one blink in ms
@@ -149,7 +149,7 @@ bool led_single_smooth_blink(uint32_t led, uint32_t duration_ms, bool enable)
 }
 
 /**
- * @brief Function to blink led smoothly set number of times with required duration
+ * @brief Function to blink led smoothly set number of times with required duration. The function is blocking.
  * 
  * @param[in] led_idx Led to blink
  * @param[in] num  Number of times
@@ -165,7 +165,7 @@ void led_blocked_multiple_smooth_blink(uint32_t led , uint32_t num, uint32_t hal
 }
 
 /**
- * @brief Function to blink led smoothly set number of times with required duration. Function is blocking.
+ * @brief Function to blink led smoothly set number of times with required duration. The function is not blocking.
  * 
  * @param[in] led Led to blink
  * @param[in] num Number of times

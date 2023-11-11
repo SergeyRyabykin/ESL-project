@@ -38,6 +38,10 @@ void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info)
     led_on(LED_R);
     while(true) {
         NRF_LOG_INFO("ERROR: %d", info);
+        
+        LOG_BACKEND_USB_PROCESS();
+        NRF_LOG_PROCESS();
+
     }
 }
 
@@ -92,6 +96,10 @@ int main(void)
 {
     uint32_t ret = 0;
 
+     // Log initialization
+    NRF_LOG_INIT(NULL);
+    NRF_LOG_DEFAULT_BACKENDS_INIT();
+
     config_pins_as_leds(ARRAY_SIZE(leds_list), leds_list);
     all_leds_off(ARRAY_SIZE(leds_list), leds_list);
 
@@ -112,6 +120,7 @@ int main(void)
     ret = app_timer_create(&double_click_timer, APP_TIMER_MODE_SINGLE_SHOT, custom_double_click_timer_timeout_handler);
     APP_ERROR_CHECK(ret);
 
+
     // GPIOTE initialization
     if(!nrfx_gpiote_is_init()) {
         ret = nrfx_gpiote_init();
@@ -125,15 +134,11 @@ int main(void)
 
     nrfx_gpiote_in_event_enable(BUTTON, true);
 
-    // Log initialization
-    NRF_LOG_INIT(NULL);
-    NRF_LOG_DEFAULT_BACKENDS_INIT();
-
     while(true) {
         blink_leds_according_to_id(PERIOD, blink_enable);
 
         LOG_BACKEND_USB_PROCESS();
         NRF_LOG_PROCESS();
-    }
+    }   
 }
 
