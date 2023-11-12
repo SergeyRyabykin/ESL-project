@@ -55,6 +55,7 @@ SRC_FILES += \
   $(SDK_ROOT)/components/libraries/usbd/app_usbd_serial_num.c \
   $(SDK_ROOT)/integration/nrfx/legacy/nrf_drv_power.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_power.c \
+  $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_pwm.c \
 
 
 

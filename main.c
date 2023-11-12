@@ -7,7 +7,7 @@
 #include "nrfx_systick.h"
 #include "app_timer.h"
 #include "nrfx_gpiote.h"
-
+#include "nrfx_pwm.h"
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
@@ -21,6 +21,9 @@
 #define PERIOD 1000
 #define DEBOUNCE_TIME_MS 10
 #define DOUBLE_CLICK_TIME_MS 500
+#define PWM_PLAYBACK_COUNT 1
+
+#define HUE_VAL_PER_DEGREE (NRFX_PWM_DEFAULT_CONFIG_TOP_VALUE / 360)
 
 static const unsigned int device_id[] = {6, 5, 7, 7};
 static const uint32_t leds_list[] = CUSTOM_LEDS_LIST;
@@ -70,26 +73,21 @@ void custom_button_toggle_event_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polari
     APP_ERROR_CHECK(app_timer_start(double_click_timer, APP_TIMER_TICKS(DOUBLE_CLICK_TIME_MS), NULL));
 }
 
+nrf_pwm_values_individual_t pwm_values = {
+    .channel_0 = 500,
+    .channel_1 = 0,
+    .channel_2 = 0,
+    .channel_3 = 0
+};
 
-void blink_leds_according_to_id(uint32_t period, bool enable)
-{
-    static bool is_blinking = true;
-
-    if(is_blinking) {
-        static unsigned int led_idx = 0;
-        if(!led_multiple_smooth_blink(leds_list[led_idx], device_id[led_idx], period, enable)) {
-            is_blinking = false;
-            led_idx++;
-
-            if(led_idx >= ARRAY_SIZE(leds_list)) {
-                led_idx = 0;
-            }
-        }
-    }
-    else {
-        is_blinking = is_time_expired(period * 4);
-    }
-}
+static nrfx_pwm_config_t pwm_config = NRFX_PWM_DEFAULT_CONFIG;
+static nrfx_pwm_t pwm_inst = NRFX_PWM_INSTANCE(0);
+static nrf_pwm_sequence_t pwm_sequence = {
+    .values = (nrf_pwm_values_t){.p_individual = &pwm_values},
+    .length = NRF_PWM_VALUES_LENGTH(pwm_values),
+    .repeats = 100,
+    .end_delay = 0
+};
 
 
 int main(void)
@@ -133,9 +131,11 @@ int main(void)
     APP_ERROR_CHECK(ret);
 
     nrfx_gpiote_in_event_enable(BUTTON, true);
+    
+    ret = nrfx_pwm_init(&pwm_inst, &pwm_config, NULL);
+    nrfx_pwm_simple_playback(&pwm_inst, &pwm_sequence, PWM_PLAYBACK_COUNT, NRFX_PWM_FLAG_LOOP);
 
     while(true) {
-        blink_leds_according_to_id(PERIOD, blink_enable);
 
         LOG_BACKEND_USB_PROCESS();
         NRF_LOG_PROCESS();
