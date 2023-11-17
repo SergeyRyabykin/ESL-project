@@ -1,4 +1,5 @@
 #include "custom_buttons.h"
+#include "nrfx_gpiote.h"
 
 void config_pin_as_button(uint32_t pin)
 {
@@ -19,4 +20,14 @@ bool button_is_pressed(uint32_t pin)
 bool button_is_released(uint32_t pin)
 {
     return (nrf_gpio_pin_read(pin));
+}
+
+bool button_te_is_pressed(uint32_t pin)
+{
+    return !nrfx_gpiote_in_is_set(pin);
+}
+
+bool button_te_is_released(uint32_t pin)
+{
+    return nrfx_gpiote_in_is_set(pin);
 }
