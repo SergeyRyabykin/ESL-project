@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "nrf_gpio.h"
+#include "nrf_gpio.h"
 
 #define BUTTON NRF_GPIO_PIN_MAP(1, 6)
 
