@@ -4,7 +4,6 @@
 
 #include "sdk_config.h"
 #include "nrf_delay.h"
-// #include "nrfx_systick.h"
 #include "app_timer.h"
 #include "nrfx_pwm.h"
 #include "nrfx_gpiote.h"
