@@ -1,14 +1,14 @@
 #include <math.h>
-#include "custom_hsv.h"
-#include "nordic_common.h"
 #include "sdk_config.h"
+// #include "nordic_common.h"
+#include "custom_hsv.h"
 
 #define PWM_COUNT_TOP NRFX_PWM_DEFAULT_CONFIG_TOP_VALUE
 
-void hsv_to_rgb(struct hsv color, union rgb *rgb_color)
+void custom_hsv_to_rgb(const custom_hsv_t color, uint16_t *red, uint16_t *green, uint16_t *blue)
 {
     float s = color.saturation / 100.0f;
-    float v = color.brightness / 100.0f;
+    float v = color.value / 100.0f;
 
     float c = s * v;
 
@@ -43,7 +43,42 @@ void hsv_to_rgb(struct hsv color, union rgb *rgb_color)
             break;
     }
 
-    rgb_color->red = (r + m) * PWM_COUNT_TOP;
-    rgb_color->green = (g + m) * PWM_COUNT_TOP;
-    rgb_color->blue = (b + m) * PWM_COUNT_TOP;
+    *red = (r + m) * PWM_COUNT_TOP;
+    *green = (g + m) * PWM_COUNT_TOP;
+    *blue = (b + m) * PWM_COUNT_TOP;
+}
+
+void custom_hsv_hue_change_by_one(custom_hsv_t *color)
+{
+    if(360 <= ++color->hue) {
+        color->hue = 0;
+    }
+}
+
+void custom_hsv_saturation_change_by_one(custom_hsv_ctx_t *context)
+{
+    if(context->satur_is_forward) {
+        if(MAX_SATURATION <= ++context->color.saturation) {
+            context->satur_is_forward = false;
+        }
+    }
+    else {
+        if(0 >= --context->color.saturation) {
+            context->satur_is_forward = true;
+        }
+    }
+}
+
+void custom_hsv_value_change_by_one(custom_hsv_ctx_t *context)
+{    
+    if(context->value_is_forward) {
+        if(MAX_SATURATION <= ++context->color.value) {
+            context->value_is_forward = false;
+        }
+    }
+    else {
+        if(0 >= --context->color.value) {
+            context->value_is_forward = true;
+        }
+    }          
 }
