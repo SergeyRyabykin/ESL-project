@@ -1,6 +1,6 @@
 #include "custom_leds.h"
 
-void config_pin_as_led(uint32_t pin)
+void custom_led_pin_config(uint32_t pin)
 {
     nrf_gpio_cfg(pin, 
                  GPIO_PIN_CNF_DIR_Output, 
@@ -11,33 +11,33 @@ void config_pin_as_led(uint32_t pin)
                 );
 }
 
-void config_pins_as_leds(unsigned int num, const uint32_t pins[num]) 
+void custom_led_all_pins_config(unsigned int num, const uint32_t pins[num]) 
 {
     for(unsigned int i = 0; i < num; i++) {
-        config_pin_as_led(pins[i]);
+        custom_led_pin_config(pins[i]);
     }
 }
 
 
-void led_on(uint32_t pin)
+void custom_led_on(uint32_t pin)
 {
     nrf_gpio_pin_clear(pin);
 }
 
-void led_off(uint32_t pin)
+void custom_led_off(uint32_t pin)
 {
     nrf_gpio_pin_set(pin);
 }
 
-void led_toggle(uint32_t pin)
+void custom_led_toggle(uint32_t pin)
 {
     nrf_gpio_pin_toggle(pin);
 }
 
-void all_leds_off(unsigned int num, const uint32_t leds[num])
+void custom_leds_off_all(unsigned int num, const uint32_t leds[num])
 {
     for(unsigned int i = 0; i < num; i++) {
-        led_off(leds[i]);
+        custom_led_off(leds[i]);
     }
 }
 
@@ -48,7 +48,7 @@ void all_leds_off(unsigned int num, const uint32_t leds[num])
  * @return true If led is turned on
  * @return false If led is turned off
  */
-bool led_is_on(uint32_t pin)
+bool custom_led_is_on(uint32_t pin)
 {
     return(!nrf_gpio_pin_out_read(pin));
 }

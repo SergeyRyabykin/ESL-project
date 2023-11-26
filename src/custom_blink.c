@@ -49,13 +49,13 @@ void led_blocked_single_smooth_blink(uint32_t led, uint32_t duration_ms, volatil
     do {
 
         if(0 < current_duty_cycle){
-            led_on(led);
+            custom_led_on(led);
         }
         nrfx_systick_get(&state);
         while(!nrfx_systick_test(&state, current_duty_cycle)) {
             ;
         }
-        led_off(led);
+        custom_led_off(led);
         nrfx_systick_get(&state);
         while(!nrfx_systick_test(&state, (BLINK_PERIOD_US - current_duty_cycle))) {
             ;
@@ -114,7 +114,7 @@ bool led_single_smooth_blink(uint32_t led, uint32_t duration_ms, bool enable)
     if(nrfx_systick_test(&state, time_to_wait)) {
         
         if(0 < current_duty_cycle){
-            led_toggle(led);
+            custom_led_toggle(led);
         }
 
         if(enable) {
@@ -132,7 +132,7 @@ bool led_single_smooth_blink(uint32_t led, uint32_t duration_ms, bool enable)
             }
 
             if(0 >= current_duty_cycle) {
-                led_off(led);
+                custom_led_off(led);
                 current_duty_cycle = 0;
                 time_to_wait = 0;
                 forward_direction = true;
@@ -141,7 +141,7 @@ bool led_single_smooth_blink(uint32_t led, uint32_t duration_ms, bool enable)
             }
         }
 
-        time_to_wait = (led_is_on(led)) ? current_duty_cycle : (BLINK_PERIOD_US - current_duty_cycle);
+        time_to_wait = (custom_led_is_on(led)) ? current_duty_cycle : (BLINK_PERIOD_US - current_duty_cycle);
         nrfx_systick_get(&state);
     }
 
