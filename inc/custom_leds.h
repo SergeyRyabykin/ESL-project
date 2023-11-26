@@ -10,12 +10,12 @@
 
 #define CUSTOM_LEDS_LIST {LED_Y, LED_R, LED_G, LED_B}
 
-void config_pin_as_led(uint32_t pin);
-void config_pins_as_leds(unsigned int num, const uint32_t pins[num]);
-void led_on(uint32_t pin);
-void led_off(uint32_t pin);
-void led_toggle(uint32_t pin);
-void all_leds_off(unsigned int num, const uint32_t leds[num]);
-bool led_is_on(uint32_t pin);
+void custom_led_pin_config(uint32_t pin);
+void custom_led_all_pins_config(unsigned int num, const uint32_t pins[num]);
+void custom_led_on(uint32_t pin);
+void custom_led_off(uint32_t pin);
+void custom_led_toggle(uint32_t pin);
+void custom_leds_off_all(unsigned int num, const uint32_t leds[num]);
+bool custom_led_is_on(uint32_t pin);
 
 #endif // CUSTOM_PINS_H__
