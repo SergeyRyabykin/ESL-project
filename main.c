@@ -4,14 +4,13 @@
 #include "sdk_config.h"
 #include "nrf_delay.h"
 #include "nrfx_pwm.h"
-#include "nrf_log.h"
-#include "nrf_log_ctrl.h"
-#include "nrf_log_default_backends.h"
-#include "nrf_log_backend_usb.h"
+// #include "nrf52840.h"
 
 #include "custom_buttons.h"
 #include "custom_app.h"
 #include "custom_hsv.h"
+#include "custom_log.h"
+#include "custom_nvm.h"
 
 #define PWM_PLAYBACK_COUNT 1
 
@@ -49,10 +48,7 @@ static nrf_pwm_sequence_t g_pwm_sequence = {
 // Function to process call if APP_ERROR_CHECK macros failed
 void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info)
 {
-    NRF_LOG_INFO("ERROR: %d", info);
-
-    LOG_BACKEND_USB_PROCESS();
-    NRF_LOG_PROCESS();
+    LOG("ERROR: %d", info);
 
     while(true) {
         // Infinite loop
@@ -63,6 +59,14 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
 {
     if(DOUBLE_CLICK_RELEASED == custom_button_get_state(CUSTOM_BUTTON) && !custom_button_is_processed(CUSTOM_BUTTON)) {
         custom_app_set_pwm_indicator(custom_app_change_state(), &g_app_pwm_ind_ctx);
+
+        // TODO: Find out why the app is hanged up here when loggin is done
+        // LOG("Double click");
+
+        if(DEFAULT_MODE == custom_app_get_state()) {
+            custom_nvm_save_obj(&g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
+        }
+
         custom_button_processed(CUSTOM_BUTTON, true);
     }
 
@@ -78,14 +82,11 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
     }
     
     custom_app_process_pwm_indicator(&g_app_pwm_ind_ctx);
-
-
 }
 
 int main(void)
 {
     uint32_t ret = 0;
-
     // Log initialization
     NRF_LOG_INIT(NULL);
     NRF_LOG_DEFAULT_BACKENDS_INIT();
@@ -95,7 +96,10 @@ int main(void)
 
     ret = custom_button_event_enable(CUSTOM_BUTTON, &g_gpiote_cfg);
     APP_ERROR_CHECK(ret);
-    
+
+    ret = custom_nvm_init(&g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
+    APP_ERROR_CHECK(ret);
+
     custom_hsv_to_rgb(g_custom_hsv_ctx.color, &g_pwm_values.channel_1, &g_pwm_values.channel_2, &g_pwm_values.channel_3);
 
     ret = nrfx_pwm_init(&g_pwm_inst, &g_pwm_config, custom_pwm_event_handler);

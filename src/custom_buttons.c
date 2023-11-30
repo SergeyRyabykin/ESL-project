@@ -1,6 +1,7 @@
 #include "custom_buttons.h"
 #include "nrfx_gpiote.h"
 #include "app_timer.h"
+#include "nrf_drv_clock.h"
 
 #define DEBOUNCE_TIME_MS 10
 #define DOUBLE_CLICK_TIME_MS 500
@@ -134,6 +135,13 @@ static void custom_button_toggle_event_handler(nrfx_gpiote_pin_t pin, nrf_gpiote
 ret_code_t custom_button_events_init(void)
 {
     ret_code_t ret = 0;
+
+    ret = nrf_drv_clock_init();
+    if (NRF_SUCCESS != ret && NRF_ERROR_MODULE_ALREADY_INITIALIZED != ret) {
+        return ret;
+    }
+
+    nrf_drv_clock_lfclk_request(NULL);
 
     // RTC initialization
     ret = app_timer_init();
