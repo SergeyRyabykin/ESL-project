@@ -2,9 +2,7 @@
 #include <stdint.h>
 
 #include "sdk_config.h"
-#include "nrf_delay.h"
 #include "nrfx_pwm.h"
-// #include "nrf52840.h"
 
 #include "custom_buttons.h"
 #include "custom_app.h"
@@ -13,6 +11,35 @@
 #include "custom_nvm.h"
 
 #define PWM_PLAYBACK_COUNT 1
+
+#include "app_usbd.h"
+#include "app_usbd_serial_num.h"
+#include "app_usbd_cdc_acm.h"
+
+
+#define READ_SIZE 1
+
+static char m_rx_buffer[READ_SIZE];
+
+static void usb_ev_handler(app_usbd_class_inst_t const * p_inst,
+                           app_usbd_cdc_acm_user_event_t event);
+
+/* Make sure that they don't intersect with LOG_BACKEND_USB_CDC_ACM */
+#define CDC_ACM_COMM_INTERFACE  2
+#define CDC_ACM_COMM_EPIN       NRF_DRV_USBD_EPIN3
+
+#define CDC_ACM_DATA_INTERFACE  3
+#define CDC_ACM_DATA_EPIN       NRF_DRV_USBD_EPIN4
+#define CDC_ACM_DATA_EPOUT      NRF_DRV_USBD_EPOUT4
+
+APP_USBD_CDC_ACM_GLOBAL_DEF(usb_cdc_acm,
+                            usb_ev_handler,
+                            CDC_ACM_COMM_INTERFACE,
+                            CDC_ACM_DATA_INTERFACE,
+                            CDC_ACM_COMM_EPIN,
+                            CDC_ACM_DATA_EPIN,
+                            CDC_ACM_DATA_EPOUT,
+                            APP_USBD_CDC_COMM_PROTOCOL_AT_V250);
 
 static nrf_pwm_values_individual_t g_pwm_values;
 
@@ -44,6 +71,8 @@ static nrf_pwm_sequence_t g_pwm_sequence = {
     .repeats = 100,
 };
 
+
+nrfx_err_t custom_pwm_init(unsigned int id, nrf_pwm_values_individual_t values, void (*custom_pwm_handler)(void));
 
 // Function to process call if APP_ERROR_CHECK macros failed
 void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info)
@@ -84,6 +113,60 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
     custom_app_process_pwm_indicator(&g_app_pwm_ind_ctx);
 }
 
+static void usb_ev_handler(app_usbd_class_inst_t const * p_inst,
+                           app_usbd_cdc_acm_user_event_t event)
+{
+    switch (event) {
+    case APP_USBD_CDC_ACM_USER_EVT_PORT_OPEN: {
+        ret_code_t ret;
+        // bsp_board_led_on(0);
+        ret = app_usbd_cdc_acm_read(&usb_cdc_acm, m_rx_buffer, READ_SIZE);
+        UNUSED_VARIABLE(ret);
+        break;
+    }
+    case APP_USBD_CDC_ACM_USER_EVT_PORT_CLOSE: {
+        // bsp_board_led_off(0);
+        break;
+    }
+    case APP_USBD_CDC_ACM_USER_EVT_TX_DONE: {
+        NRF_LOG_INFO("tx done");
+        // bsp_board_led_invert(1);
+        break;
+    }
+    case APP_USBD_CDC_ACM_USER_EVT_RX_DONE: {
+        // bsp_board_led_invert(2);
+        ret_code_t ret;
+        do {
+            /*Get amount of data transfered*/
+            size_t size = app_usbd_cdc_acm_rx_size(&usb_cdc_acm);
+            NRF_LOG_INFO("rx size: %d", size);
+
+            /* It's the simple version of an echo. Note that writing doesn't
+             * block execution, and if we have a lot of characters to read and
+             * write, some characters can be missed.
+             */
+            if (m_rx_buffer[0] == '\r' || m_rx_buffer[0] == '\n') {
+                ret = app_usbd_cdc_acm_write(&usb_cdc_acm, "\r\n", 2);
+            }
+            else {
+                ret = app_usbd_cdc_acm_write(&usb_cdc_acm,
+                                             m_rx_buffer,
+                                             READ_SIZE);
+            }
+
+            /* Fetch data until internal buffer is empty */
+            ret = app_usbd_cdc_acm_read(&usb_cdc_acm,
+                                        m_rx_buffer,
+                                        READ_SIZE);
+        } while (ret == NRF_SUCCESS);
+
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 int main(void)
 {
     uint32_t ret = 0;
@@ -106,8 +189,15 @@ int main(void)
     APP_ERROR_CHECK(ret);
     nrfx_pwm_simple_playback(&g_pwm_inst, &g_pwm_sequence, PWM_PLAYBACK_COUNT, NRFX_PWM_FLAG_LOOP);
 
+    app_usbd_class_inst_t const * class_cdc_acm = app_usbd_cdc_acm_class_inst_get(&usb_cdc_acm);
+    ret = app_usbd_class_append(class_cdc_acm);
+    APP_ERROR_CHECK(ret);
 
     while(true) {
+        // while (app_usbd_event_queue_process()) {
+        //     /* Nothing to do */
+        // }
+
         LOG_BACKEND_USB_PROCESS();
         NRF_LOG_PROCESS();
     }   
