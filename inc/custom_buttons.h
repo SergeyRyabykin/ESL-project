@@ -26,7 +26,7 @@ bool custom_button_te_is_released(uint32_t pin);
 
 ret_code_t custom_button_events_init(void);
 ret_code_t custom_button_event_enable(const uint32_t pin, const nrfx_gpiote_in_config_t *gpiote_cfg);
-bool custom_button_processed(const uint32_t pin, const bool is_processed);
+bool custom_button_process(const uint32_t pin);
 custom_button_state_t custom_button_get_state(const uint32_t pin);
 bool custom_button_is_processed(const uint32_t pin);
 
