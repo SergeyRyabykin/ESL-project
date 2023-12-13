@@ -22,6 +22,8 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#define CUSTOM_RGB_STEP (NRFX_PWM_DEFAULT_CONFIG_TOP_VALUE / 255.0)
+
 #define READ_SIZE 1
 
 static char m_rx_buffer[READ_SIZE];
@@ -60,6 +62,7 @@ static custom_app_pwm_indicator_ctx_t g_app_pwm_ind_ctx = {
     .pwm_channel = &g_pwm_values.channel_0
 };
 
+// TODO: Save settings to this stucture after color changing through cli
 static custom_hsv_ctx_t g_custom_hsv_ctx = {
     .color = {
         .hue = 277,
@@ -77,13 +80,15 @@ static nrf_pwm_sequence_t g_pwm_sequence = {
 };
 
 
-CUSTOM_QUEUE_INIT(custom_queue);
+CUSTOM_QUEUE_INIT(g_custom_queue_output);
 static custom_cmd_ctx_t g_custom_cmd_ctx;
 
-static const char cmd_rgb_description[] = "RGB <red> <green> <blue> - sets RGB color. Max value is 255\r\n";
-static const char cmd_hsv_description[] = "HSV <hue> <saturation> <value> - sets HSV color. Hue in degrees others in percents\r\n";
-static const char cmd_help_description[] = "help - shows this information\r\n";
-static const char cmd_error_message[] = "Unknown command\r\n";
+// TODO: Find out if there is required any attribute to save strings to Flash.
+// TODO: STATIC_ASSERT to test size of all the strings again queie size to avoid print losing
+static const char g_cmd_rgb_description[] = "RGB <red> <green> <blue> - sets RGB color. Max value is 255\r\n";
+static const char g_cmd_hsv_description[] = "HSV <hue> <saturation> <value> - sets HSV color. Hue in degrees others in percents\r\n";
+static const char g_cmd_help_description[] = "help - shows this information\r\n";
+static const char g_cmd_error_message[] = "Unknown command\r\n";
 
 static char g_cmd_str[CUSTOM_CMD_STR_LENGTH];
 static char g_message[CUSTOM_QUEUE_ROOM_SIZE];
@@ -98,7 +103,7 @@ static bool is_number(const char *str)
     return true;
 }
 
-ret_code_t cmd_hsv_handler(char *str)
+static ret_code_t cmd_hsv_handler(char *str)
 {
     unsigned int arg_cnt = 0;
     char *token = strtok(str, " ");
@@ -148,16 +153,21 @@ ret_code_t cmd_hsv_handler(char *str)
     g_custom_hsv_ctx.color.saturation = cmd_args[1];
     g_custom_hsv_ctx.color.value = cmd_args[2];
 
-    custom_hsv_to_rgb(&g_custom_hsv_ctx.color, &g_pwm_values.channel_1, &g_pwm_values.channel_2, &g_pwm_values.channel_3);
+    uint8_t r, g, b;
+    custom_hsv_to_rgb(&g_custom_hsv_ctx.color, &r, &g, &b);
+    g_pwm_values.channel_1 = CUSTOM_RGB_STEP * r;
+    g_pwm_values.channel_2 = CUSTOM_RGB_STEP * g;
+    g_pwm_values.channel_3 = CUSTOM_RGB_STEP * b;
+
 
     return NRF_SUCCESS;
 }
 
-ret_code_t cmd_rgb_handler(char *str)
+static ret_code_t cmd_rgb_handler(char *str)
 {
     unsigned int arg_cnt = 0;
     char *token = strtok(str, " ");
-    uint16_t cmd_args[3] = {0};
+    uint8_t cmd_args[3] = {0};
 
     while((token = strtok(NULL, " "))) {
         if(is_number(token) && 3 > arg_cnt) {
@@ -182,18 +192,20 @@ ret_code_t cmd_rgb_handler(char *str)
     }
 
 
-    g_pwm_values.channel_1 = (NRFX_PWM_DEFAULT_CONFIG_TOP_VALUE / 255.0) * cmd_args[0];
-    g_pwm_values.channel_2 = (NRFX_PWM_DEFAULT_CONFIG_TOP_VALUE / 255.0) * cmd_args[1];
-    g_pwm_values.channel_3 = (NRFX_PWM_DEFAULT_CONFIG_TOP_VALUE / 255.0) * cmd_args[2];
+    g_pwm_values.channel_1 = CUSTOM_RGB_STEP * cmd_args[0];
+    g_pwm_values.channel_2 = CUSTOM_RGB_STEP * cmd_args[1];
+    g_pwm_values.channel_3 = CUSTOM_RGB_STEP * cmd_args[2];
+
+    custom_rgb_to_hsv( &g_custom_hsv_ctx.color, cmd_args[0], cmd_args[1], cmd_args[2]);
 
     return NRF_SUCCESS;
 }
 
-ret_code_t cmd_help_handler(char *str)
+static ret_code_t cmd_help_handler(char *str)
 {
     //  TODO: There might be overflow of queue
     for(unsigned int i = 0; i < g_custom_cmd_ctx.number_commands; i++) {
-        custom_queue_add(&custom_queue, (char *)g_custom_cmd_ctx.commands[i].cmd_description);
+        custom_queue_add(&g_custom_queue_output, (char *)g_custom_cmd_ctx.commands[i].cmd_description);
     }
 
     return NRF_SUCCESS;
@@ -235,7 +247,11 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
             default: break;
         }
 
-        custom_hsv_to_rgb(&g_custom_hsv_ctx.color, &g_pwm_values.channel_1, &g_pwm_values.channel_2, &g_pwm_values.channel_3);
+        uint8_t r, g, b;
+        custom_hsv_to_rgb(&g_custom_hsv_ctx.color, &r, &g, &b);
+        g_pwm_values.channel_1 = CUSTOM_RGB_STEP * r;
+        g_pwm_values.channel_2 = CUSTOM_RGB_STEP * g;
+        g_pwm_values.channel_3 = CUSTOM_RGB_STEP * b;
     }
     
     custom_app_process_pwm_indicator(&g_app_pwm_ind_ctx);
@@ -255,8 +271,8 @@ static void usb_ev_handler(app_usbd_class_inst_t const * p_inst,
         break;
     }
     case APP_USBD_CDC_ACM_USER_EVT_TX_DONE: {
-        if(!custom_queue_is_empty(&custom_queue)) {
-            custom_queue_get(g_message, &custom_queue);
+        if(!custom_queue_is_empty(&g_custom_queue_output)) {
+            custom_queue_get(g_message, &g_custom_queue_output);
             app_usbd_cdc_acm_write(&custom_usb_cdc_acm,
                                     g_message,
                                     strlen(g_message));
@@ -276,8 +292,9 @@ static void usb_ev_handler(app_usbd_class_inst_t const * p_inst,
              * write, some characters can be missed.
              */
             if (m_rx_buffer[0] == '\r' || m_rx_buffer[0] == '\n') {
-                if(!custom_queue_is_empty(&custom_queue)) {
-                    custom_queue_add(&custom_queue, "\r\n");
+                // TODO: The problem is that the queue must be used alwyas to get real state of the transmitter.
+                if(!custom_queue_is_empty(&g_custom_queue_output)) {
+                    custom_queue_add(&g_custom_queue_output, "\r\n");
                 }
                 else {
                     ret = app_usbd_cdc_acm_write(&custom_usb_cdc_acm, "\r\n", 2);
@@ -286,15 +303,15 @@ static void usb_ev_handler(app_usbd_class_inst_t const * p_inst,
                 if(strlen(g_cmd_str)) {
                     ret = custom_cmd_execute(g_cmd_str, &g_custom_cmd_ctx);
                     if(NRF_SUCCESS != ret) {
-                        custom_queue_add(&custom_queue, (char *)cmd_error_message);
+                        custom_queue_add(&g_custom_queue_output, g_cmd_error_message);
                     }
                 }
                 g_cmd_str[0] = '\0';
 
             }
             else {
-                if(!custom_queue_is_empty(&custom_queue)) {
-                    custom_queue_add(&custom_queue, m_rx_buffer);
+                if(!custom_queue_is_empty(&g_custom_queue_output)) {
+                    custom_queue_add(&g_custom_queue_output, m_rx_buffer);
                 }
                 else {
                     ret = app_usbd_cdc_acm_write(&custom_usb_cdc_acm,
@@ -335,7 +352,11 @@ int main(void)
     ret = custom_nvm_init(&g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
     APP_ERROR_CHECK(ret);
 
-    custom_hsv_to_rgb(&g_custom_hsv_ctx.color, &g_pwm_values.channel_1, &g_pwm_values.channel_2, &g_pwm_values.channel_3);
+    uint8_t r, g, b;
+    custom_hsv_to_rgb(&g_custom_hsv_ctx.color, &r, &g, &b);
+    g_pwm_values.channel_1 = CUSTOM_RGB_STEP * r;
+    g_pwm_values.channel_2 = CUSTOM_RGB_STEP * g;
+    g_pwm_values.channel_3 = CUSTOM_RGB_STEP * b;
 
     ret = nrfx_pwm_init(&g_pwm_inst, &g_pwm_config, custom_pwm_event_handler);
     APP_ERROR_CHECK(ret);
@@ -345,11 +366,11 @@ int main(void)
     ret = app_usbd_class_append(custom_class_cdc_acm);
     APP_ERROR_CHECK(ret);
 
-    ret = custom_cmd_init("RGB", cmd_rgb_handler, cmd_rgb_description, &g_custom_cmd_ctx);
+    ret = custom_cmd_init("RGB", cmd_rgb_handler, g_cmd_rgb_description, &g_custom_cmd_ctx);
     APP_ERROR_CHECK(ret);
-    ret = custom_cmd_init("HSV", cmd_hsv_handler, cmd_hsv_description, &g_custom_cmd_ctx);
+    ret = custom_cmd_init("HSV", cmd_hsv_handler, g_cmd_hsv_description, &g_custom_cmd_ctx);
     APP_ERROR_CHECK(ret);
-    ret = custom_cmd_init("help", cmd_help_handler, cmd_help_description, &g_custom_cmd_ctx);
+    ret = custom_cmd_init("help", cmd_help_handler, g_cmd_help_description, &g_custom_cmd_ctx);
     APP_ERROR_CHECK(ret);
 
     while(true) {
