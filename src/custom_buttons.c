@@ -190,7 +190,7 @@ ret_code_t custom_button_event_enable(const uint32_t pin, const nrfx_gpiote_in_c
     return ret;
 }
 
-bool custom_button_processed(const uint32_t pin, const bool is_processed)
+bool custom_button_process(const uint32_t pin)
 {
     custom_button_ctx_t *context = get_button_context_by_pin(pin);
 

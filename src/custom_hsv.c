@@ -5,14 +5,14 @@
 
 #define PWM_COUNT_TOP NRFX_PWM_DEFAULT_CONFIG_TOP_VALUE
 
-void custom_hsv_to_rgb(const custom_hsv_t color, uint16_t *red, uint16_t *green, uint16_t *blue)
+void custom_hsv_to_rgb(const custom_hsv_t *color, uint16_t *red, uint16_t *green, uint16_t *blue)
 {
-    float s = color.saturation / 100.0f;
-    float v = color.value / 100.0f;
+    float s = color->saturation / 100.0f;
+    float v = color->value / 100.0f;
 
     float c = s * v;
 
-    float x = c * (1 - fabs(fmod((color.hue / 60.0), 2.0) - 1));
+    float x = c * (1 - fabs(fmod((color->hue / 60.0), 2.0) - 1));
 
     float m = v - c;
 
@@ -20,7 +20,7 @@ void custom_hsv_to_rgb(const custom_hsv_t color, uint16_t *red, uint16_t *green,
     float g = 0;
     float b = 0;
 
-    switch (color.hue / 60) {
+    switch (color->hue / 60) {
         case 0: 
             r = c; g = x; b = 0;
             break;
