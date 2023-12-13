@@ -2,6 +2,7 @@
 #define CUSTOM_QUEUE_H__
 
 #include <stdbool.h>
+#include "sdk_errors.h"
 
 #define CUSTOM_QUEUE_LENGTH 10
 #define CUSTOM_QUEUE_ROOM_SIZE 64
@@ -19,9 +20,9 @@ typedef struct {
                                     .empty_rooms_num = CUSTOM_QUEUE_LENGTH\
                                 }
 
-int custom_queue_add(custom_queue_t *queue, char *str);
-int custom_queue_get(char *str, custom_queue_t *queue);
-bool custom_queue_is_empty(custom_queue_t *queue);
+ret_code_t custom_queue_add(custom_queue_t *queue, const char *str);
+ret_code_t custom_queue_get(char *str, custom_queue_t *queue);
+bool custom_queue_is_empty(const custom_queue_t *queue);
 
 
 #endif // CUSTOM_QUEUE_H__

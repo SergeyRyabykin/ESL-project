@@ -4,7 +4,7 @@
 #include "custom_queue.h"
 
 
-int custom_queue_add(custom_queue_t *queue, char *str)
+ret_code_t custom_queue_add(custom_queue_t *queue, const char *str)
 {
     int ret = 0;
     size_t length = strlen(str);
@@ -20,15 +20,15 @@ int custom_queue_add(custom_queue_t *queue, char *str)
         }
     }
     else {
-        ret = -1;
+        ret = NRF_ERROR_NO_MEM;
     }
 
     return ret;
 }
 
-int custom_queue_get(char *str, custom_queue_t *queue)
+ret_code_t custom_queue_get(char *str, custom_queue_t *queue)
 {
-    int ret = 0;
+    int ret = NRF_SUCCESS;
     if(CUSTOM_QUEUE_LENGTH > queue->empty_rooms_num) {
         strncpy(str, queue->queue[queue->last_index], CUSTOM_QUEUE_ROOM_SIZE);
         queue->empty_rooms_num++;
@@ -37,13 +37,13 @@ int custom_queue_get(char *str, custom_queue_t *queue)
         }
     }
     else {
-        ret = -1;
+        ret = NRF_ERROR_NOT_FOUND;
     }
 
     return ret;
 }
 
-bool custom_queue_is_empty(custom_queue_t *queue)
+bool custom_queue_is_empty(const custom_queue_t *queue)
 {
     return (CUSTOM_QUEUE_LENGTH == queue->empty_rooms_num);
 }
