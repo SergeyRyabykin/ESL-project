@@ -21,8 +21,8 @@ typedef struct {
     unsigned int number_commands;
 } custom_cmd_ctx_t;
 
-ret_code_t custom_cmd_init(const char *name, custom_cmd_executor_t execute, const char * description, custom_cmd_ctx_t *context);
-ret_code_t custom_cmd_init_all(const unsigned int size, custom_cmd_t commands[size], custom_cmd_ctx_t *context);
+ret_code_t custom_cmd_init(const char *name, const custom_cmd_executor_t execute, const char * description, custom_cmd_ctx_t *context);
+ret_code_t custom_cmd_init_all(const unsigned int size, const custom_cmd_t commands[size], custom_cmd_ctx_t *context);
 ret_code_t custom_cmd_execute(char *cmd_str, const custom_cmd_ctx_t *context);
 
 

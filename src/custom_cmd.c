@@ -5,7 +5,7 @@
 
 #define CUSTOM_CMD_DELIMITER ' '
 
-static ret_code_t custom_cmd_get_name(char *name, char *cmd)
+static ret_code_t custom_cmd_get_name(char *name, const char *cmd)
 {
     size_t i = 0;
 
@@ -40,7 +40,7 @@ static const custom_cmd_t *custom_cmd_get_cmd(const char *name, const custom_cmd
     return NULL;
 }
 
-ret_code_t custom_cmd_init(const char *name, custom_cmd_executor_t execute, const char * description, custom_cmd_ctx_t *context)
+ret_code_t custom_cmd_init(const char *name, const custom_cmd_executor_t execute, const char * description, custom_cmd_ctx_t *context)
 {
     ret_code_t ret = NRF_ERROR_NO_MEM;
 
@@ -55,7 +55,7 @@ ret_code_t custom_cmd_init(const char *name, custom_cmd_executor_t execute, cons
     return ret;
 }
 
-ret_code_t custom_cmd_init_all(const unsigned int size, custom_cmd_t commands[size], custom_cmd_ctx_t *context)
+ret_code_t custom_cmd_init_all(const unsigned int size, const custom_cmd_t commands[size], custom_cmd_ctx_t *context)
 {
     ret_code_t ret = NRF_SUCCESS;
     for(unsigned int i = 0; size > i; i++) {
@@ -79,7 +79,6 @@ ret_code_t custom_cmd_execute(char *cmd_str, const custom_cmd_ctx_t *context)
         return ret;
     }
 
-    // TODO: This function damages the cmd string. Resolve this problem for the future.
     const custom_cmd_t *cmd = custom_cmd_get_cmd(name, context);
 
     if(NULL != cmd) {
