@@ -1,0 +1,27 @@
+#ifndef CUSTOM_QUEUE_H__
+#define CUSTOM_QUEUE_H__
+
+#include <stdbool.h>
+
+#define CUSTOM_QUEUE_LENGTH 10
+#define CUSTOM_QUEUE_ROOM_SIZE 64
+
+typedef struct {
+    char queue[CUSTOM_QUEUE_LENGTH][CUSTOM_QUEUE_ROOM_SIZE];
+    int next_index;
+    int last_index;
+    unsigned int empty_rooms_num;
+} custom_queue_t;
+
+#define CUSTOM_QUEUE_INIT(name) static custom_queue_t name = {\
+                                    .next_index = 0,\
+                                    .last_index = 0,\
+                                    .empty_rooms_num = CUSTOM_QUEUE_LENGTH\
+                                }
+
+int custom_queue_add(custom_queue_t *queue, char *str);
+int custom_queue_get(char *str, custom_queue_t *queue);
+bool custom_queue_is_empty(custom_queue_t *queue);
+
+
+#endif // CUSTOM_QUEUE_H__
