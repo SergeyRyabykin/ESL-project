@@ -3,16 +3,18 @@
 #include <stdbool.h>
 #include "custom_queue.h"
 
+#define CUSTOM_QUEUE_STR_SIZE (CUSTOM_QUEUE_ROOM_SIZE - 1)
 
 ret_code_t custom_queue_add(custom_queue_t *queue, const char *str)
 {
-    int ret = 0;
+    int ret = NRF_SUCCESS;
     size_t length = strlen(str);
-    unsigned int rooms_number = (length / CUSTOM_QUEUE_ROOM_SIZE) + ((length % CUSTOM_QUEUE_ROOM_SIZE) ? 1 : 0);
+    unsigned int rooms_number = (length / CUSTOM_QUEUE_STR_SIZE) + ((length % CUSTOM_QUEUE_STR_SIZE) ? 1 : 0);
 
     if(queue->empty_rooms_num >= rooms_number) {
         for(unsigned int i = 0; i < rooms_number; i++) {
-            strncpy(queue->queue[queue->next_index], (str + CUSTOM_QUEUE_ROOM_SIZE * i), CUSTOM_QUEUE_ROOM_SIZE);
+            strncpy(queue->queue[queue->next_index], (str + CUSTOM_QUEUE_STR_SIZE * i), CUSTOM_QUEUE_STR_SIZE);
+            queue->queue[queue->next_index][CUSTOM_QUEUE_STR_SIZE] = '\0';
             queue->empty_rooms_num--;
             if(CUSTOM_QUEUE_LENGTH <= ++queue->next_index) {
                 queue->next_index = 0;

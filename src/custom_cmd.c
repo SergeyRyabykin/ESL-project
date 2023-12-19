@@ -69,7 +69,7 @@ ret_code_t custom_cmd_init_all(const unsigned int size, const custom_cmd_t comma
     return ret;
 }
 
-ret_code_t custom_cmd_execute(char *cmd_str, const custom_cmd_ctx_t *context)
+ret_code_t custom_cmd_execute(char *cmd_str, const custom_cmd_ctx_t *cmd_context, void *app_context)
 {
     ret_code_t ret;
     char name[CUSTOM_CMD_NAME_LENGTH] = "\0";
@@ -79,10 +79,10 @@ ret_code_t custom_cmd_execute(char *cmd_str, const custom_cmd_ctx_t *context)
         return ret;
     }
 
-    const custom_cmd_t *cmd = custom_cmd_get_cmd(name, context);
+    const custom_cmd_t *cmd = custom_cmd_get_cmd(name, cmd_context);
 
     if(NULL != cmd) {
-        ret = cmd->cmd_execute(cmd_str);
+        ret = cmd->cmd_execute(cmd_str, app_context);
     }
     else {
         ret = NRF_ERROR_NOT_FOUND;

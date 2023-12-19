@@ -14,11 +14,12 @@ typedef struct {
     unsigned int empty_rooms_num;
 } custom_queue_t;
 
-#define CUSTOM_QUEUE_INIT(name) static custom_queue_t name = {\
-                                    .next_index = 0,\
-                                    .last_index = 0,\
-                                    .empty_rooms_num = CUSTOM_QUEUE_LENGTH\
-                                }
+#define CUSTOM_QUEUE_INIT_VALUES \
+{\
+    .next_index = 0,\
+    .last_index = 0,\
+    .empty_rooms_num = CUSTOM_QUEUE_LENGTH\
+}
 
 ret_code_t custom_queue_add(custom_queue_t *queue, const char *str);
 ret_code_t custom_queue_get(char *str, custom_queue_t *queue);
