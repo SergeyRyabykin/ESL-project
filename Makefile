@@ -11,6 +11,12 @@ PROJ_DIR := .
 $(OUTPUT_DIRECTORY)/nrf52840_xxaa.out: \
   LINKER_SCRIPT  := $(PROJ_DIR)/ld/blinky_gcc_nrf52.ld
 
+CUSTOM_USER_FLAGS = 
+
+ifeq (${ESTC_USB_CLI_ENABLED},1)
+CUSTOM_USER_FLAGS += -DESTC_USB_CLI_ENABLED
+endif
+
 # Source files common to all targets
 SRC_FILES += \
   $(SDK_ROOT)/modules/nrfx/mdk/gcc_startup_nrf52840.S \
@@ -129,6 +135,7 @@ CFLAGS += -DAPP_TIMER_V2
 CFLAGS += -DAPP_TIMER_V2_RTC1_ENABLED
 CFLAGS += -DNRFX_SYSTICK_ENABLED
 CFLAGS += -DUSE_APP_CONFIG
+CFLAGS += ${CUSTOM_USER_FLAGS}
 
 
 
@@ -162,6 +169,7 @@ nrf52840_xxaa: CFLAGS += -D__HEAP_SIZE=8192
 nrf52840_xxaa: CFLAGS += -D__STACK_SIZE=8192
 nrf52840_xxaa: ASMFLAGS += -D__HEAP_SIZE=8192
 nrf52840_xxaa: ASMFLAGS += -D__STACK_SIZE=8192
+
 
 # Add standard libraries at the very end of the linker input, after all objects
 # that may need symbols provided by these libraries.
