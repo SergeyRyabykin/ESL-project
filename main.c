@@ -72,8 +72,6 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
     if(DOUBLE_CLICK_RELEASED == custom_button_get_state(CUSTOM_BUTTON) && !custom_button_is_processed(CUSTOM_BUTTON)) {
         custom_app_set_pwm_indicator(custom_app_change_state(), &g_app_pwm_ind_ctx);
 
-        // TODO: Find out why the app is hanged up here when loggin is done
-
         if(DEFAULT_MODE == custom_app_get_state()) {
             custom_nvm_save_obj(&g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
         }

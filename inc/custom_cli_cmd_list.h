@@ -4,7 +4,6 @@
 #include "custom_cmd.h"
 #include "sdk_errors.h"
 
-
 ret_code_t custom_cmd_rgb_handler(char *cmd, void *context);
 ret_code_t custom_cmd_hsv_handler(char *cmd, void *context);
 ret_code_t custom_cmd_help_handler(char *cmd, void *context);
