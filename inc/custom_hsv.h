@@ -21,7 +21,8 @@ typedef struct {
     bool value_is_forward;
 } custom_hsv_ctx_t;
 
-void custom_hsv_to_rgb(const custom_hsv_t *color, uint16_t *red, uint16_t *green, uint16_t *blue);
+void custom_rgb_to_hsv(custom_hsv_t *hsv, const uint8_t red, const uint8_t green, const uint8_t blue);
+void custom_hsv_to_rgb(const custom_hsv_t *color, uint8_t *red, uint8_t *green, uint8_t *blue);
 void custom_hsv_hue_change_by_one(custom_hsv_t *color);
 void custom_hsv_saturation_change_by_one(custom_hsv_ctx_t *context);
 void custom_hsv_value_change_by_one(custom_hsv_ctx_t *context);

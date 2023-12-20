@@ -1,11 +1,48 @@
 #include <math.h>
-#include "sdk_config.h"
-// #include "nordic_common.h"
 #include "custom_hsv.h"
 
-#define PWM_COUNT_TOP NRFX_PWM_DEFAULT_CONFIG_TOP_VALUE
+#define MAX(a, b) ((a > b) ? a : b)
+#define MIN(a, b) ((a < b) ? a : b)
 
-void custom_hsv_to_rgb(const custom_hsv_t *color, uint16_t *red, uint16_t *green, uint16_t *blue)
+void custom_rgb_to_hsv(custom_hsv_t *hsv, const uint8_t red, const uint8_t green, const uint8_t blue)
+{
+   float r = red / 255.0;
+   float g = green / 255.0;
+   float b = blue / 255.0;
+
+   float c_max = MAX(r, MAX(g, b));
+   float c_min = MIN(r, MIN(g, b));
+
+   float delta = c_max - c_min;
+
+   // Hue
+   if(0.0 == delta) {
+      hsv->hue = 0;
+   }
+   else if(c_max == r) {
+      int hue = 60 * fmod(((g - b) / delta), 6.0) ;
+      hsv->hue = (360 + hue) % 360;
+   }
+   else if(c_max == g) {
+      hsv->hue = 60 * ((b - r) / delta + 2);
+   }
+   else if(c_max == b) {
+      hsv->hue = 60 * ((r - g) / delta + 4);
+   }
+
+   // Saturation
+   if(0.0 == c_max) {
+      hsv->saturation = 0;
+   }
+   else {
+      hsv->saturation = (delta / c_max) * 100;
+   }
+
+   // Value
+   hsv->value = c_max * 100;
+}
+
+void custom_hsv_to_rgb(const custom_hsv_t *color, uint8_t *red, uint8_t *green, uint8_t *blue)
 {
     float s = color->saturation / 100.0f;
     float v = color->value / 100.0f;
@@ -43,9 +80,9 @@ void custom_hsv_to_rgb(const custom_hsv_t *color, uint16_t *red, uint16_t *green
             break;
     }
 
-    *red = (r + m) * PWM_COUNT_TOP;
-    *green = (g + m) * PWM_COUNT_TOP;
-    *blue = (b + m) * PWM_COUNT_TOP;
+    *red = (r + m) * 255;
+    *green = (g + m) * 255;
+    *blue = (b + m) * 255;
 }
 
 void custom_hsv_hue_change_by_one(custom_hsv_t *color)
