@@ -93,6 +93,7 @@ static void custom_usb_event_handler(app_usbd_class_inst_t const * p_inst,
              */
             if (m_rx_buffer[0] == '\r' || m_rx_buffer[0] == '\n') {
                 // TODO: The problem is that the queue must be used alwyas to get real state of the transmitter.
+                // TODO: Organize the output by adding data to queue.
                 if(!custom_queue_is_empty(&g_custom_queue_output)) {
                     custom_queue_add(&g_custom_queue_output, "\r\n");
 

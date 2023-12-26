@@ -21,7 +21,6 @@ static custom_hsv_ctx_t g_custom_hsv_ctx = {
     }
 };
 
-
 #ifdef ESTC_USB_CLI_ENABLED
 #include "custom_cli.h"
 #include "custom_app_types.h"
@@ -73,7 +72,10 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
         custom_app_set_pwm_indicator(custom_app_change_state(), &g_app_pwm_ind_ctx);
 
         if(DEFAULT_MODE == custom_app_get_state()) {
-            custom_nvm_save_obj(&g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
+            ret_code_t ret = custom_nvm_save(&g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color), DEFAULT_HSV_COLOR_ID);
+            APP_ERROR_CHECK(ret);
+            ret = custom_nvm_discard(DEFAULT_HSV_COLOR_ID);
+            APP_ERROR_CHECK(ret);
         }
 
         custom_button_process(CUSTOM_BUTTON);
@@ -105,14 +107,38 @@ int main(void)
     APP_ERROR_CHECK(ret);
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 
+#ifdef ESTC_USB_CLI_ENABLED
+    ret = custom_cli_init(&g_custom_app_ctx);
+    APP_ERROR_CHECK(ret);
+#endif
+
     ret = custom_button_events_init();
     APP_ERROR_CHECK(ret);
 
     ret = custom_button_event_enable(CUSTOM_BUTTON, &g_gpiote_cfg);
     APP_ERROR_CHECK(ret);
 
-    ret = custom_nvm_init(&g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
-    APP_ERROR_CHECK(ret);
+    if(custom_button_te_is_pressed(CUSTOM_BUTTON)) {
+        custom_nvm_erase();
+    }
+    
+// -------------------------------------------------------------------------------------------------------
+    while(DEFAULT_UNKNOWN == custom_button_get_state(CUSTOM_BUTTON)) {
+        LOG_BACKEND_USB_PROCESS();
+        NRF_LOG_PROCESS();
+    }
+// -------------------------------------------------------------------------------------------------------
+
+    uintptr_t saved_object = custom_nvm_find(DEFAULT_HSV_COLOR_ID);
+    if(saved_object) {
+        g_custom_hsv_ctx.color.hue = ((custom_hsv_t *)saved_object)->hue;
+        g_custom_hsv_ctx.color.saturation = ((custom_hsv_t *)saved_object)->saturation;
+        g_custom_hsv_ctx.color.value = ((custom_hsv_t *)saved_object)->value;
+    }
+    else {
+        ret = custom_nvm_save(&g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color), DEFAULT_HSV_COLOR_ID);
+        APP_ERROR_CHECK(ret);
+    }
 
     uint8_t r, g, b;
     custom_hsv_to_rgb(&g_custom_hsv_ctx.color, &r, &g, &b);
@@ -123,12 +149,7 @@ int main(void)
     ret = nrfx_pwm_init(&g_pwm_inst, &g_pwm_config, custom_pwm_event_handler);
     APP_ERROR_CHECK(ret);
     nrfx_pwm_simple_playback(&g_pwm_inst, &g_pwm_sequence, PWM_PLAYBACK_COUNT, NRFX_PWM_FLAG_LOOP);
-
-#ifdef ESTC_USB_CLI_ENABLED
-    ret = custom_cli_init(&g_custom_app_ctx);
-    APP_ERROR_CHECK(ret);
-#endif
-
+    
     while(true) {
         LOG_BACKEND_USB_PROCESS();
         NRF_LOG_PROCESS();
