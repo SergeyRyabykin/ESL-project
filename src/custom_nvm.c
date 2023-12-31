@@ -1,12 +1,14 @@
 #include <stdint.h>
-#include <limits.h>
 #include "nrfx_nvmc.h"
 #include "nrf_dfu_types.h"
 #include "app_util.h"
 #include "custom_nvm.h"
 
+#include "custom_log.h"
+#include "custom_leds.h"
+
 typedef uint16_t custom_nvm_record_validity_t;
-typedef uint8_t custom_nvm_payload_size_t; // UCHAR_MAX is maximum payload_size
+typedef uint8_t custom_nvm_payload_size_t; // CUSTOM_PAYLOAD_MAX_SIZE is maximum payload_size
 
 #define CUSTOM_APP_DATA_AREA_START_ADDR ((uint32_t)(BOOTLOADER_ADDRESS - NRF_DFU_APP_DATA_AREA_SIZE))
 #define CUSTOM_NVM_NUMBER_APP_DATA_PAGES (NRF_DFU_APP_DATA_AREA_SIZE / CODE_PAGE_SIZE)
@@ -180,6 +182,12 @@ static uintptr_t custom_nvm_find_record_by_id(const custom_nvm_payload_id_t id)
     return 0;
 }
 
+void custom_nvm_erase(void) {
+    nrfx_nvmc_page_erase(CUSTOM_NVM_APP_DATA_PAGE_ADDR(0));
+    nrfx_nvmc_page_erase(CUSTOM_NVM_APP_DATA_PAGE_ADDR(1));
+    nrfx_nvmc_page_erase(CUSTOM_NVM_APP_DATA_PAGE_ADDR(2));
+}
+
 uintptr_t custom_nvm_find(const custom_nvm_payload_id_t id)
 {
     uintptr_t record = custom_nvm_find_record_by_id(id);
@@ -191,13 +199,32 @@ uintptr_t custom_nvm_find(const custom_nvm_payload_id_t id)
     return 0;
 }
 
-void custom_nvm_erase(void) {
-    nrfx_nvmc_page_erase(CUSTOM_NVM_APP_DATA_PAGE_ADDR(0));
-    nrfx_nvmc_page_erase(CUSTOM_NVM_APP_DATA_PAGE_ADDR(1));
-    nrfx_nvmc_page_erase(CUSTOM_NVM_APP_DATA_PAGE_ADDR(2));
+uintptr_t custom_nvm_find_next(const uintptr_t current_object_addr, const custom_nvm_payload_id_t id)
+{
+    unsigned int current_page = custom_nvm_get_actual_page();
+
+    custom_nvm_record_info_t *record = (custom_nvm_record_info_t *)(current_object_addr - SIZE_IN_WORDS(custom_nvm_record_info_t) * sizeof(uint32_t));
+
+    if(!custom_nvm_is_addr_valid_for_page((uintptr_t)record, current_page, 0)) {
+        return 0;
+    }
+
+    record = (custom_nvm_record_info_t *)((uintptr_t)record + CUSTOM_NVM_RECORD_SIZE_IN_BYTES(record->payload_size));
+
+    while(CUSTOM_NVM_RECORD_VALID == record->validity || CUSTOM_NVM_RECORD_INVALID == record->validity) {
+
+        if(CUSTOM_NVM_RECORD_VALID == record->validity && id == record->payload_id) {
+            return (uintptr_t)record;
+        }
+
+        record = (custom_nvm_record_info_t *)((char *)record + CUSTOM_NVM_RECORD_SIZE_IN_BYTES(record->payload_size));
+    }
+
+    return 0;
 }
 
-ret_code_t custom_nvm_discard(const custom_nvm_payload_id_t id)
+
+ret_code_t custom_nvm_discard_by_id(const custom_nvm_payload_id_t id)
 {
     ret_code_t ret = NRF_ERROR_NOT_FOUND;
 
@@ -210,12 +237,31 @@ ret_code_t custom_nvm_discard(const custom_nvm_payload_id_t id)
     return ret;
 }
 
+ret_code_t custom_nvm_discard(const uintptr_t object_addr)
+{
+    ret_code_t ret = NRF_ERROR_NOT_FOUND;
+
+    unsigned int current_page = custom_nvm_get_actual_page();
+    uintptr_t record = object_addr - SIZE_IN_WORDS(custom_nvm_record_info_t) * sizeof(uint32_t);
+
+     if(!custom_nvm_is_addr_valid_for_page(record, current_page, 0)) {
+        return ret;
+    }
+
+    if(record && CUSTOM_NVM_RECORD_VALID == ((custom_nvm_record_info_t *)record)->validity) {
+        ret = custom_nvm_discard_record(record);
+    }
+
+    return ret;
+}
+
 ret_code_t custom_nvm_save(const void *object, const size_t object_size, const custom_nvm_payload_id_t id)
 {
     ret_code_t ret = NRF_ERROR_DATA_SIZE;
 
-    // TODO: Look for a way to use something general instead of UCHAR_MAX
-    if(UCHAR_MAX < object_size) {
+    // TODO: Look for a way to use something general instead of CUSTOM_PAYLOAD_MAX_SIZE
+    if(CUSTOM_PAYLOAD_MAX_SIZE < object_size) {
+        NRF_LOG_INFO("nvm: payload size error");
         return ret;
     }
 
@@ -252,6 +298,8 @@ ret_code_t custom_nvm_save(const void *object, const size_t object_size, const c
             next_page = CUSTOM_NVM_GET_NEXT_PAGE(next_page);
         }
     }
+
+    custom_led_on(LED_R);
 
     return ret;
 }

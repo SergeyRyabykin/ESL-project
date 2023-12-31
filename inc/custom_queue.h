@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "sdk_errors.h"
 
-#define CUSTOM_QUEUE_LENGTH 10
+#define CUSTOM_QUEUE_LENGTH 20
 #define CUSTOM_QUEUE_ROOM_SIZE 64
 
 typedef struct {
