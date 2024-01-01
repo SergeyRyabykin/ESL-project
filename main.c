@@ -48,13 +48,13 @@ static custom_app_pwm_indicator_ctx_t g_app_pwm_ind_ctx = {
     .pwm_channel = &g_pwm_values.channel_0
 };
 
-// static nrfx_pwm_config_t g_pwm_config = NRFX_PWM_DEFAULT_CONFIG;
-// static nrfx_pwm_t g_pwm_inst = NRFX_PWM_INSTANCE(0);
-// static nrf_pwm_sequence_t g_pwm_sequence = {
-//     .values = (nrf_pwm_values_t){.p_individual = (nrf_pwm_values_individual_t *)&g_pwm_values},
-//     .length = NRF_PWM_VALUES_LENGTH(g_pwm_values),
-//     .repeats = 100,
-// };
+static nrfx_pwm_config_t g_pwm_config = NRFX_PWM_DEFAULT_CONFIG;
+static nrfx_pwm_t g_pwm_inst = NRFX_PWM_INSTANCE(0);
+static nrf_pwm_sequence_t g_pwm_sequence = {
+    .values = (nrf_pwm_values_t){.p_individual = (nrf_pwm_values_individual_t *)&g_pwm_values},
+    .length = NRF_PWM_VALUES_LENGTH(g_pwm_values),
+    .repeats = 100,
+};
 
 // Function to process call if APP_ERROR_CHECK macros failed
 void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info)
@@ -99,8 +99,8 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
     custom_app_process_pwm_indicator(&g_app_pwm_ind_ctx);
 }
 
-#include "custom_leds.h"
-uint32_t leds[] = CUSTOM_LEDS_LIST;
+// #include "custom_leds.h"
+// uint32_t leds[] = CUSTOM_LEDS_LIST;
 
 int main(void)
 {
@@ -124,16 +124,19 @@ int main(void)
     // To erase user app non-volatile memory
     if(custom_button_te_is_pressed(CUSTOM_BUTTON)) {
         custom_nvm_erase();
+        while(custom_button_te_is_pressed(CUSTOM_BUTTON)) {
+            ;
+        }
     }
 
-    custom_led_all_pins_config(ARRAY_SIZE(leds), leds);
-    custom_leds_off_all(ARRAY_SIZE(leds), leds);
+    // custom_led_all_pins_config(ARRAY_SIZE(leds), leds);
+    // custom_leds_off_all(ARRAY_SIZE(leds), leds);
 
 // -------------------------------------------------------------------------------------------------------
-    while(DEFAULT_UNKNOWN == custom_button_get_state(CUSTOM_BUTTON)) {
-        LOG_BACKEND_USB_PROCESS();
-        NRF_LOG_PROCESS();
-    }
+    // while(DEFAULT_UNKNOWN == custom_button_get_state(CUSTOM_BUTTON)) {
+    //     LOG_BACKEND_USB_PROCESS();
+    //     NRF_LOG_PROCESS();
+    // }
 // -------------------------------------------------------------------------------------------------------
 
     uintptr_t saved_object = custom_nvm_find(DEFAULT_HSV_COLOR_ID);
@@ -153,9 +156,9 @@ int main(void)
     g_pwm_values.channel_2 = CUSTOM_RGB_STEP * g;
     g_pwm_values.channel_3 = CUSTOM_RGB_STEP * b;
 
-    // ret = nrfx_pwm_init(&g_pwm_inst, &g_pwm_config, custom_pwm_event_handler);
-    // APP_ERROR_CHECK(ret);
-    // nrfx_pwm_simple_playback(&g_pwm_inst, &g_pwm_sequence, PWM_PLAYBACK_COUNT, NRFX_PWM_FLAG_LOOP);
+    ret = nrfx_pwm_init(&g_pwm_inst, &g_pwm_config, custom_pwm_event_handler);
+    APP_ERROR_CHECK(ret);
+    nrfx_pwm_simple_playback(&g_pwm_inst, &g_pwm_sequence, PWM_PLAYBACK_COUNT, NRFX_PWM_FLAG_LOOP);
     
     while(true) {
         LOG_BACKEND_USB_PROCESS();

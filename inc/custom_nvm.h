@@ -6,6 +6,8 @@
 
 #include "sdk_errors.h"
 
+#define CUSTOM_NVM_SIZE_IN_WORDS(size_in_bytes) (size_in_bytes / sizeof(uint32_t) + ((size_in_bytes % sizeof(uint32_t)) ? 1 : 0))
+#define CUSTOM_NVM_SIZE_IN_BYTES(size_in_bytes) (CUSTOM_NVM_SIZE_IN_WORDS(size_in_bytes) * sizeof(uint32_t))
 #define CUSTOM_PAYLOAD_MAX_SIZE UCHAR_MAX 
 typedef uint8_t custom_nvm_payload_id_t;
 

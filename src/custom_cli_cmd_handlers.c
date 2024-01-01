@@ -10,12 +10,10 @@
 #include "custom_nvm.h"
 
 #include "custom_log.h"
-#include "custom_leds.h"
 
 typedef struct {
     custom_hsv_t color;
-    // char name[CUSTOM_PAYLOAD_MAX_SIZE - sizeof(custom_hsv_t) - 1];
-    char name[100];
+    char name[CUSTOM_PAYLOAD_MAX_SIZE - CUSTOM_NVM_SIZE_IN_BYTES(sizeof(custom_hsv_t))];
 } custom_saved_color_t;
 
 static bool is_number(const char *str)
@@ -238,37 +236,33 @@ ret_code_t custom_cmd_add_current_color_handler(char *str, void *context)
 {
     custom_app_ctx_t *app_ctx = (custom_app_ctx_t *)context;
     custom_saved_color_t object = {.color.hue = 0};
-    char *token = strtok(str, " ");
-    token = strtok(NULL, " ");
+    char *token = strtok(str, " "); // Read the command name
+    token = strtok(NULL, " "); // Read the argument
 
-    strcpy(object.name, token);
-
-    if(strtok(NULL, " ")) {
-        NRF_LOG_INFO("hnd invalid");
+    if(!token || strtok(NULL, " ")) {
         return NRF_ERROR_INVALID_PARAM;
     }
+
+    strcpy(object.name, token);
 
     object.color.hue = app_ctx->custom_hsv_ctx->color.hue;
     object.color.saturation = app_ctx->custom_hsv_ctx->color.saturation;
     object.color.value = app_ctx->custom_hsv_ctx->color.value;
 
-    NRF_LOG_INFO("hnd ok");
-    
-        custom_led_on(LED_B);
-        LOG("iNTO");
-    /* ret_code_t ret =  */(void)custom_nvm_save(&object, sizeof(object), SAVED_COLOR_ID);
-        custom_led_on(LED_Y);
+    NRF_LOG_INFO("Saving...");
+    ret_code_t ret = custom_nvm_save(&object, sizeof(object), SAVED_COLOR_ID);
 
-    // return ret;
-    return 0;
+    NRF_LOG_INFO("RET: %x", ret);
+    return ret;
 }
 
 ret_code_t custom_cmd_del_color_handler(char *str, void *context)
 {
     ret_code_t ret = NRF_ERROR_NOT_FOUND;
     char *token = strtok(str, " ");
+    token = strtok(NULL, " "); // Read the argument
 
-    if(strtok(NULL, " ")) {
+    if(!token || strtok(NULL, " ")) {
         return NRF_ERROR_INVALID_PARAM;
     }
 
@@ -289,9 +283,10 @@ ret_code_t custom_cmd_apply_color_handler(char *str, void *context)
 {
     custom_app_ctx_t *app_ctx = (custom_app_ctx_t *)context;
     ret_code_t ret = NRF_ERROR_NOT_FOUND;
-    char *token = strtok(str, " ");
+    char *token = strtok(str, " "); // Read the command name
+    token = strtok(NULL, " "); // Read the argument
 
-    if(strtok(NULL, " ")) {
+    if(!token || strtok(NULL, " ")) {
         return NRF_ERROR_INVALID_PARAM;
     }
 

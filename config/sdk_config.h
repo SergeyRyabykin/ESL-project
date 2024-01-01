@@ -77,7 +77,7 @@
 // <12=> 4096 bytes 
 
 #ifndef NRF_STACK_GUARD_CONFIG_SIZE
-#define NRF_STACK_GUARD_CONFIG_SIZE 7
+#define NRF_STACK_GUARD_CONFIG_SIZE 12
 #endif
 
 // </e>
@@ -6905,7 +6905,7 @@
 // <8=> 512 bytes 
 
 #ifndef TASK_MANAGER_CONFIG_STACK_GUARD
-#define TASK_MANAGER_CONFIG_STACK_GUARD 7
+#define TASK_MANAGER_CONFIG_STACK_GUARD 8
 #endif
 
 // </e>
