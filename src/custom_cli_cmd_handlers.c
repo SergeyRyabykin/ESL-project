@@ -9,11 +9,11 @@
 #include "custom_app_types.h"
 #include "custom_nvm.h"
 
-#include "custom_log.h"
+#define CUSTOM_COLOR_NAME_MAX_LENGTH 50
 
 typedef struct {
     custom_hsv_t color;
-    char name[CUSTOM_PAYLOAD_MAX_SIZE - CUSTOM_NVM_SIZE_IN_BYTES(sizeof(custom_hsv_t))];
+    char name[CUSTOM_COLOR_NAME_MAX_LENGTH];
 } custom_saved_color_t;
 
 static bool is_number(const char *str)
@@ -249,10 +249,8 @@ ret_code_t custom_cmd_add_current_color_handler(char *str, void *context)
     object.color.saturation = app_ctx->custom_hsv_ctx->color.saturation;
     object.color.value = app_ctx->custom_hsv_ctx->color.value;
 
-    NRF_LOG_INFO("Saving...");
     ret_code_t ret = custom_nvm_save(&object, sizeof(object), SAVED_COLOR_ID);
 
-    NRF_LOG_INFO("RET: %x", ret);
     return ret;
 }
 
@@ -315,13 +313,26 @@ ret_code_t custom_cmd_apply_color_handler(char *str, void *context)
 
 ret_code_t custom_cmd_list_colors_handler(char *str, void *context)
 {
-    // custom_app_ctx_t *app_ctx = (custom_app_ctx_t *)context;
 
-    // for(unsigned int i = 0; i < app_ctx->custom_cmd_ctx->number_commands; i++) {
-    //     while(NRF_SUCCESS != app_ctx->custom_print_output((char *)app_ctx->custom_cmd_ctx->commands[i].cmd_description)) {
-    //         ;
-    //     }
-    // }
+    custom_app_ctx_t *app_ctx = (custom_app_ctx_t *)context;
+    char *token = strtok(str, " "); // Read the command name
+
+    if(!token || strtok(NULL, " ")) {
+        return NRF_ERROR_INVALID_PARAM;
+    }
+
+    uintptr_t object = custom_nvm_find(SAVED_COLOR_ID);
+
+    while(object) {
+        while(NRF_SUCCESS != app_ctx->custom_print_output(((custom_saved_color_t *)object)->name)) {
+            ;
+        }
+        while(NRF_SUCCESS != app_ctx->custom_print_output("\n\r")) {
+            ;
+        }
+
+        object = custom_nvm_find_next(object, SAVED_COLOR_ID);
+    }
 
     return NRF_SUCCESS;
 }

@@ -4,8 +4,6 @@
 #include "app_util.h"
 #include "custom_nvm.h"
 
-#include "custom_log.h"
-
 typedef uint16_t custom_nvm_record_validity_t;
 typedef uint8_t custom_nvm_payload_size_t; // CUSTOM_PAYLOAD_MAX_SIZE is maximum payload_size
 
@@ -257,15 +255,12 @@ ret_code_t custom_nvm_save(const void *object, const size_t object_size, const c
     ret_code_t ret = NRF_ERROR_DATA_SIZE;
 
     if(CUSTOM_PAYLOAD_MAX_SIZE < object_size) {
-        NRF_LOG_INFO("Size exceeded!");
         return ret;
     }
 
     // // Object saving attempt
     unsigned int page = custom_nvm_get_actual_page();
     uintptr_t addr = custom_nvm_find_empty_record_addr();
-
-    NRF_LOG_INFO("Page: %d, addr: %p", page, addr);
 
     if(custom_nvm_is_addr_valid_for_page(addr, page, object_size)) {
         ret = custom_nvm_write_record(object, object_size, id, addr);
@@ -278,7 +273,7 @@ ret_code_t custom_nvm_save(const void *object, const size_t object_size, const c
     if(NRF_SUCCESS != ret) {
         unsigned int next_page = CUSTOM_NVM_GET_NEXT_PAGE(page);
 
-        while(NRF_SUCCESS != ret || page != next_page) {
+        while(NRF_SUCCESS != ret && page != next_page) {
             ret = custom_nvm_copy_valid_records(next_page, page);
 
             if(NRF_SUCCESS == ret) {

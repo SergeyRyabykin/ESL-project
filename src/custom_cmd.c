@@ -3,9 +3,6 @@
 #include <string.h>
 #include "custom_cmd.h"
 
-#include "custom_log.h"
-#include "custom_leds.h"
-
 #define CUSTOM_CMD_DELIMITER ' '
 
 static ret_code_t custom_cmd_get_name(char *name, const char *cmd)
@@ -89,9 +86,7 @@ ret_code_t custom_cmd_execute(char *cmd_str, const custom_cmd_ctx_t *cmd_context
     }
     else {
         ret = NRF_ERROR_NOT_FOUND;
-        NRF_LOG_INFO("CMD not found");
     }
 
-    // NRF_LOG_INFO("CMD ret: %x", ret);
     return ret;
 }
