@@ -73,9 +73,10 @@ static void custom_usb_event_handler(app_usbd_class_inst_t const * p_inst,
     case APP_USBD_CDC_ACM_USER_EVT_TX_DONE: {
         if(!custom_queue_is_empty(&g_custom_queue_output)) {
             custom_queue_get(g_message, &g_custom_queue_output);
+            unsigned int message_length = strlen(g_message);
             app_usbd_cdc_acm_write(&custom_usb_cdc_acm,
                                     g_message,
-                                    strlen(g_message));
+                                    (message_length < CUSTOM_QUEUE_ROOM_SIZE) ? message_length : CUSTOM_QUEUE_ROOM_SIZE);
         }
         break;
     }
