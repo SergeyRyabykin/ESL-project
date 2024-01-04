@@ -101,6 +101,15 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
 
 int main(void)
 {
+    // To erase user app non-volatile memory
+    custom_button_pin_config(CUSTOM_BUTTON);
+    if(custom_button_is_pressed(CUSTOM_BUTTON)) {
+        custom_nvm_erase();
+        while(custom_button_is_pressed(CUSTOM_BUTTON)) {
+            ;
+        }
+    }
+
     uint32_t ret = 0;
     // Log initialization
     ret = NRF_LOG_INIT(NULL);
@@ -118,13 +127,7 @@ int main(void)
     ret = custom_button_event_enable(CUSTOM_BUTTON, &g_gpiote_cfg);
     APP_ERROR_CHECK(ret);
 
-    // To erase user app non-volatile memory
-    if(custom_button_te_is_pressed(CUSTOM_BUTTON)) {
-        custom_nvm_erase();
-        while(custom_button_te_is_pressed(CUSTOM_BUTTON)) {
-            ;
-        }
-    }
+    
 
     uintptr_t saved_object = custom_nvm_find(DEFAULT_HSV_COLOR_ID);
     if(saved_object) {
