@@ -21,14 +21,16 @@ static char g_cmd_str[CUSTOM_CMD_STR_LENGTH];
 static char g_message[CUSTOM_QUEUE_ROOM_SIZE];
 static const char g_cmd_error_message[] = "Unknown command\r\n";
 
-static custom_queue_t g_custom_queue_output = CUSTOM_QUEUE_INIT_VALUES;
-static custom_cmd_ctx_t *g_custom_cmd_ctx_ptr = NULL;
-static custom_app_ctx_t *g_custom_app_ctx_ptr = NULL;
 
+static volatile unsigned int g_transmitter_is_busy = false;
+static void custom_cli_start_transmission(void);
 static void custom_usb_event_handler(app_usbd_class_inst_t const * p_inst,
                            app_usbd_cdc_acm_user_event_t event);
 
 
+static custom_queue_t g_custom_queue_output = CUSTOM_QUEUE_INIT_VALUES((unsigned int * volatile)&g_transmitter_is_busy, custom_cli_start_transmission);
+static custom_cmd_ctx_t *g_custom_cmd_ctx_ptr = NULL;
+static custom_app_ctx_t *g_custom_app_ctx_ptr = NULL;
 
 APP_USBD_CDC_ACM_GLOBAL_DEF(custom_usb_cdc_acm,
                             custom_usb_event_handler,
@@ -39,6 +41,17 @@ APP_USBD_CDC_ACM_GLOBAL_DEF(custom_usb_cdc_acm,
                             CUSTOM_CDC_ACM_DATA_EPOUT,
                             APP_USBD_CDC_COMM_PROTOCOL_NONE);
 
+
+
+void custom_cli_start_transmission(void)
+{
+    custom_queue_get(g_message, &g_custom_queue_output);
+    unsigned int message_length = strlen(g_message);
+    g_transmitter_is_busy = true;
+    app_usbd_cdc_acm_write(&custom_usb_cdc_acm,
+                                    g_message,
+                                    (message_length < CUSTOM_QUEUE_ROOM_SIZE) ? message_length : CUSTOM_QUEUE_ROOM_SIZE);
+}
 
 
 ret_code_t custom_cli_init(const custom_app_ctx_t *app_ctx)
@@ -78,29 +91,18 @@ static void custom_usb_event_handler(app_usbd_class_inst_t const * p_inst,
                                     g_message,
                                     (message_length < CUSTOM_QUEUE_ROOM_SIZE) ? message_length : CUSTOM_QUEUE_ROOM_SIZE);
         }
+        else {
+            g_transmitter_is_busy = false;
+        }
+
         break;
     }
     case APP_USBD_CDC_ACM_USER_EVT_RX_DONE: {
         ret_code_t ret;
         do {
-            /*Get amount of data transfered*/
-            size_t size = app_usbd_cdc_acm_rx_size(&custom_usb_cdc_acm);
-
-            (void)size;
-
-            /* It's the simple version of an echo. Note that writing doesn't
-             * block execution, and if we have a lot of characters to read and
-             * write, some characters can be missed.
-             */
             if (m_rx_buffer[0] == '\r' || m_rx_buffer[0] == '\n') {
-                // TODO: The problem is that the queue must be used alwyas to get real state of the transmitter.
-                // TODO: Organize the output by adding data to queue.
-                if(!custom_queue_is_empty(&g_custom_queue_output)) {
-                    custom_queue_add(&g_custom_queue_output, "\r\n");
-
-                }
-                else {
-                    ret = app_usbd_cdc_acm_write(&custom_usb_cdc_acm, "\r\n", 2);
+                while(NRF_SUCCESS != custom_queue_add(&g_custom_queue_output, "\r\n")) {
+                    ;
                 }
 
                 if(strlen(g_cmd_str)) {
@@ -115,14 +117,7 @@ static void custom_usb_event_handler(app_usbd_class_inst_t const * p_inst,
 
             }
             else {
-                if(!custom_queue_is_empty(&g_custom_queue_output)) {
-                    custom_queue_add(&g_custom_queue_output, m_rx_buffer);
-                }
-                else {
-                    ret = app_usbd_cdc_acm_write(&custom_usb_cdc_acm,
-                                                m_rx_buffer,
-                                                READ_SIZE);
-                }
+                custom_queue_add(&g_custom_queue_output, m_rx_buffer);
 
                 strncat(g_cmd_str, m_rx_buffer, sizeof(m_rx_buffer));
             }

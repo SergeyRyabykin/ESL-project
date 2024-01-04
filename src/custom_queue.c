@@ -23,6 +23,10 @@ ret_code_t custom_queue_add(custom_queue_t *queue, const char *str)
         ret = NRF_ERROR_NO_MEM;
     }
 
+    if(queue->is_busy && queue->start_transmission && false == *queue->is_busy) {
+        queue->start_transmission();
+    }
+
     return ret;
 }
 

@@ -99,9 +99,6 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
     custom_app_process_pwm_indicator(&g_app_pwm_ind_ctx);
 }
 
-// #include "custom_leds.h"
-// uint32_t leds[] = CUSTOM_LEDS_LIST;
-
 int main(void)
 {
     uint32_t ret = 0;
@@ -128,16 +125,6 @@ int main(void)
             ;
         }
     }
-
-    // custom_led_all_pins_config(ARRAY_SIZE(leds), leds);
-    // custom_leds_off_all(ARRAY_SIZE(leds), leds);
-
-// -------------------------------------------------------------------------------------------------------
-    // while(DEFAULT_UNKNOWN == custom_button_get_state(CUSTOM_BUTTON)) {
-    //     LOG_BACKEND_USB_PROCESS();
-    //     NRF_LOG_PROCESS();
-    // }
-// -------------------------------------------------------------------------------------------------------
 
     uintptr_t saved_object = custom_nvm_find(DEFAULT_HSV_COLOR_ID);
     if(saved_object) {
