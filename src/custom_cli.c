@@ -22,13 +22,13 @@ static char g_message[CUSTOM_QUEUE_ROOM_SIZE];
 static const char g_cmd_error_message[] = "Unknown command\r\n";
 
 
-static volatile unsigned int g_transmitter_is_busy = false;
+static volatile bool g_transmitter_is_busy = false;
 static void custom_cli_start_transmission(void);
 static void custom_usb_event_handler(app_usbd_class_inst_t const * p_inst,
                            app_usbd_cdc_acm_user_event_t event);
 
 
-static custom_queue_t g_custom_queue_output = CUSTOM_QUEUE_INIT_VALUES((unsigned int * volatile)&g_transmitter_is_busy, custom_cli_start_transmission);
+static custom_queue_t g_custom_queue_output = CUSTOM_QUEUE_INIT_VALUES((bool *)&g_transmitter_is_busy, custom_cli_start_transmission);
 static custom_cmd_ctx_t *g_custom_cmd_ctx_ptr = NULL;
 static custom_app_ctx_t *g_custom_app_ctx_ptr = NULL;
 
@@ -45,12 +45,14 @@ APP_USBD_CDC_ACM_GLOBAL_DEF(custom_usb_cdc_acm,
 
 void custom_cli_start_transmission(void)
 {
-    custom_queue_get(g_message, &g_custom_queue_output);
-    unsigned int message_length = strlen(g_message);
-    g_transmitter_is_busy = true;
-    app_usbd_cdc_acm_write(&custom_usb_cdc_acm,
-                                    g_message,
-                                    (message_length < CUSTOM_QUEUE_ROOM_SIZE) ? message_length : CUSTOM_QUEUE_ROOM_SIZE);
+    ret_code_t ret = custom_queue_get(g_message, &g_custom_queue_output);
+    if(NRF_SUCCESS == ret) {
+        unsigned int message_length = strlen(g_message);
+        app_usbd_cdc_acm_write(&custom_usb_cdc_acm,
+                                        g_message,
+                                        (message_length < CUSTOM_QUEUE_ROOM_SIZE) ? message_length : CUSTOM_QUEUE_ROOM_SIZE);
+        g_transmitter_is_busy = true;
+    }
 }
 
 
@@ -65,7 +67,7 @@ ret_code_t custom_cli_init(const custom_app_ctx_t *app_ctx)
 
 
 
-ret_code_t custom_cli_print(char *str)
+ret_code_t custom_cli_print(const char *str)
 {
     return custom_queue_add(&g_custom_queue_output, str);
 }
@@ -85,11 +87,15 @@ static void custom_usb_event_handler(app_usbd_class_inst_t const * p_inst,
     }
     case APP_USBD_CDC_ACM_USER_EVT_TX_DONE: {
         if(!custom_queue_is_empty(&g_custom_queue_output)) {
-            custom_queue_get(g_message, &g_custom_queue_output);
-            unsigned int message_length = strlen(g_message);
-            app_usbd_cdc_acm_write(&custom_usb_cdc_acm,
-                                    g_message,
-                                    (message_length < CUSTOM_QUEUE_ROOM_SIZE) ? message_length : CUSTOM_QUEUE_ROOM_SIZE);
+            ret_code_t ret = custom_queue_get(g_message, &g_custom_queue_output);
+            if(NRF_SUCCESS == ret) {
+                g_transmitter_is_busy = true;
+                unsigned int message_length = strlen(g_message);
+
+                app_usbd_cdc_acm_write(&custom_usb_cdc_acm,
+                                        g_message,
+                                        (message_length < CUSTOM_QUEUE_ROOM_SIZE) ? message_length : CUSTOM_QUEUE_ROOM_SIZE);
+            }
         }
         else {
             g_transmitter_is_busy = false;
@@ -107,7 +113,7 @@ static void custom_usb_event_handler(app_usbd_class_inst_t const * p_inst,
 
                 if(strlen(g_cmd_str)) {
                     if(g_custom_app_ctx_ptr && g_custom_cmd_ctx_ptr) {
-                        ret = custom_cmd_execute(g_cmd_str, g_custom_cmd_ctx_ptr, g_custom_app_ctx_ptr);
+                        ret = custom_cmd_get_cmd_executor(g_custom_app_ctx_ptr->executor_ctx, g_cmd_str, g_custom_cmd_ctx_ptr, g_custom_app_ctx_ptr);
                         if(NRF_SUCCESS != ret) {
                             custom_queue_add(&g_custom_queue_output, g_cmd_error_message);
                         }

@@ -28,11 +28,16 @@ static custom_hsv_ctx_t g_custom_hsv_ctx = {
 #include "custom_cmd.h"
 
 static const custom_cmd_ctx_t custom_cmd_ctx = CUSTOM_CMD_INIT_LIST(custom_cli_commands);
+static custom_cmd_executor_ctx_t executor_ctx = {
+    .cmd = NULL
+};
+
 static custom_app_ctx_t g_custom_app_ctx = {
     .custom_hsv_ctx = &g_custom_hsv_ctx,
     .pwm_values = &g_pwm_values,
     .custom_cmd_ctx = &custom_cmd_ctx,
     .custom_print_output = custom_cli_print,
+    .executor_ctx = &executor_ctx,
 };
 #endif
 
@@ -59,8 +64,6 @@ static nrf_pwm_sequence_t g_pwm_sequence = {
 // Function to process call if APP_ERROR_CHECK macros failed
 void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info)
 {
-    LOG("ERROR: %d", info);
-
     while(true) {
         // Infinite loop
     }
@@ -149,8 +152,18 @@ int main(void)
     ret = nrfx_pwm_init(&g_pwm_inst, &g_pwm_config, custom_pwm_event_handler);
     APP_ERROR_CHECK(ret);
     nrfx_pwm_simple_playback(&g_pwm_inst, &g_pwm_sequence, PWM_PLAYBACK_COUNT, NRFX_PWM_FLAG_LOOP);
-    
+
     while(true) {
+#ifdef ESTC_USB_CLI_ENABLED
+        if(executor_ctx.cmd) {
+            ret = executor_ctx.cmd->cmd_execute(executor_ctx.cmd_str, executor_ctx.context);
+            if(NRF_SUCCESS != ret) {
+                custom_cli_print("Arguments error!\n\r");
+            }
+            executor_ctx.cmd = NULL;
+        }
+#endif        
+
         LOG_BACKEND_USB_PROCESS();
         NRF_LOG_PROCESS();
     }   
