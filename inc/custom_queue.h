@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "sdk_errors.h"
 
-#define CUSTOM_QUEUE_LENGTH 15
+#define CUSTOM_QUEUE_LENGTH 5
 #define CUSTOM_QUEUE_ROOM_SIZE 64
 
 typedef void (*custom_queue_trigger_func_t)(void);
@@ -14,7 +14,7 @@ typedef struct {
     int next_index;
     int last_index;
     unsigned int empty_rooms_num;
-    unsigned int * volatile is_busy;
+    bool * volatile is_busy;
     custom_queue_trigger_func_t start_transmission;
 } custom_queue_t;
 

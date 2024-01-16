@@ -90,3 +90,30 @@ ret_code_t custom_cmd_execute(char *cmd_str, const custom_cmd_ctx_t *cmd_context
 
     return ret;
 }
+
+ret_code_t custom_cmd_get_cmd_executor( custom_cmd_executor_ctx_t *executor_ctx,
+                                        char *cmd_str, 
+                                        const custom_cmd_ctx_t *cmd_context, 
+                                        void *app_context )
+{
+    ret_code_t ret;
+    char name[CUSTOM_CMD_NAME_LENGTH] = "\0";
+
+    ret = custom_cmd_get_name(name, cmd_str);
+    if(NRF_SUCCESS != ret) {
+        return ret;
+    }
+
+    const custom_cmd_t *cmd = custom_cmd_get_cmd(name, cmd_context);
+
+    if(NULL != cmd) {
+        executor_ctx->cmd = (custom_cmd_t *)cmd;
+        strcpy(executor_ctx->cmd_str, cmd_str);
+        executor_ctx->context = app_context;
+    }
+    else {
+        ret = NRF_ERROR_NOT_FOUND;
+    }
+
+    return ret;
+}                                        

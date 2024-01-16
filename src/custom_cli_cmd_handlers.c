@@ -9,6 +9,9 @@
 #include "custom_app_types.h"
 #include "custom_nvm.h"
 
+#include "custom_log.h"
+
+
 #define CUSTOM_COLOR_NAME_MAX_LENGTH 50
 
 typedef struct {
@@ -131,7 +134,9 @@ ret_code_t custom_cmd_help_handler(char *str, void *context)
 
     for(unsigned int i = 0; i < app_ctx->custom_cmd_ctx->number_commands; i++) {
         while(NRF_SUCCESS != app_ctx->custom_print_output((char *)app_ctx->custom_cmd_ctx->commands[i].cmd_description)) {
-            ;
+            // To process the usb queue if the custom_queue is full
+            LOG_BACKEND_USB_PROCESS();
+            NRF_LOG_PROCESS();
         }
     }
 

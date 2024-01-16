@@ -11,7 +11,7 @@ ret_code_t custom_queue_add(custom_queue_t *queue, const char *str)
 
     if(queue->empty_rooms_num >= rooms_number) {
         for(unsigned int i = 0; i < rooms_number; i++) {
-            strncpy(queue->queue[queue->next_index], (str + CUSTOM_QUEUE_ROOM_SIZE * i), CUSTOM_QUEUE_ROOM_SIZE);
+            strncpy((char *)queue->queue[queue->next_index], (str + CUSTOM_QUEUE_ROOM_SIZE * i), CUSTOM_QUEUE_ROOM_SIZE);
             queue->empty_rooms_num--;
             
             if(CUSTOM_QUEUE_LENGTH <= ++queue->next_index) {
@@ -34,7 +34,7 @@ ret_code_t custom_queue_get(char *str, custom_queue_t *queue)
 {
     int ret = NRF_SUCCESS;
     if(CUSTOM_QUEUE_LENGTH > queue->empty_rooms_num) {
-        strncpy(str, queue->queue[queue->last_index], CUSTOM_QUEUE_ROOM_SIZE);
+        strncpy(str, (char *)queue->queue[queue->last_index], CUSTOM_QUEUE_ROOM_SIZE);
         
         if(CUSTOM_QUEUE_LENGTH <= ++queue->last_index) {
             queue->last_index = 0;
@@ -51,7 +51,7 @@ ret_code_t custom_queue_get(char *str, custom_queue_t *queue)
 
 bool custom_queue_is_empty(const custom_queue_t *queue)
 {
-    return (CUSTOM_QUEUE_LENGTH == queue->empty_rooms_num);
+    return (CUSTOM_QUEUE_LENGTH <= queue->empty_rooms_num);
 }
 
 

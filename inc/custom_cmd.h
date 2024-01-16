@@ -21,6 +21,12 @@ typedef struct {
     unsigned int number_commands;
 } custom_cmd_ctx_t;
 
+typedef struct {
+    custom_cmd_t *cmd;
+    char cmd_str[CUSTOM_CMD_STR_LENGTH];
+    void *context;
+} custom_cmd_executor_ctx_t;
+
 #define CUSTOM_CMD_INIT_LIST(commands_list) \
 {\
     .commands = (custom_cmd_t *)commands_list,\
@@ -30,6 +36,10 @@ typedef struct {
 ret_code_t custom_cmd_init(const char *name, const custom_cmd_executor_t execute, const char * description, custom_cmd_ctx_t *context);
 ret_code_t custom_cmd_init_all(const unsigned int size, const custom_cmd_t commands[size], custom_cmd_ctx_t *context);
 ret_code_t custom_cmd_execute(char *cmd_str, const custom_cmd_ctx_t *cmd_context, void *app_context);
+ret_code_t custom_cmd_get_cmd_executor( custom_cmd_executor_ctx_t *executor_ctx,
+                                        char *cmd_str, 
+                                        const custom_cmd_ctx_t *cmd_context, 
+                                        void *app_context );
 
 
 #endif // CUSTOM_CMD_H__
