@@ -31,7 +31,7 @@
 #include "nrf_log_backend_usb.h"
 
 
-#define DEVICE_NAME                     "ESTC"                                  /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "SergeyRyabykin"                                  /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 
@@ -385,7 +385,31 @@ static void advertising_init(void)
     init.config.ble_adv_fast_timeout  = APP_ADV_DURATION;
 
     // TODO: Add more data to the advertisement data
-    // TODO: Add more data to the scan response data
+    uint8_t the_man_data[8] = {8, 7, 6, 5, 4, 3, 2, 1};
+    ble_advdata_manuf_data_t m_data = {
+        .company_identifier = 0xdead,
+        .data = {
+            .size = 8,
+            .p_data = the_man_data
+        }
+    };
+
+    init.advdata.p_manuf_specific_data = &m_data;
+
+    // // TODO: Add more data to the scan response data
+    init.srdata.name_type               = BLE_ADVDATA_FULL_NAME;
+
+    uint8_t the_resp_data[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    ble_advdata_manuf_data_t r_data = {
+        .company_identifier = 0xbeaf,
+        .data = {
+            .size = 10,
+            .p_data = the_resp_data
+        }
+    };
+    init.srdata.p_manuf_specific_data = &r_data;
+
+
 
     init.evt_handler = on_adv_evt;
 
