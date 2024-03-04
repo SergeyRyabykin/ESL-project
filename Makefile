@@ -94,10 +94,12 @@ SRC_FILES += \
   $(SDK_ROOT)/components/ble/common/ble_advdata.c \
   $(SDK_ROOT)/components/ble/ble_advertising/ble_advertising.c \
   $(PROJ_DIR)/main.c \
+  $(wildcard $(PROJ_DIR)/ble/src/*.c) \
 
 # Include folders common to all targets
 INC_FOLDERS += \
   ${PROJ_DIR}/config \
+  ${PROJ_DIR}/ble/inc \
   $(SDK_ROOT)/modules/nrfx/mdk \
   $(SDK_ROOT)/modules/nrfx/hal \
   $(SDK_ROOT)/modules/nrfx/drivers/include \
@@ -227,6 +229,7 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/ble/ble_dtm \
   $(SDK_ROOT)/components/ble/ble_advertising \
   $(SDK_ROOT)/components \
+  
 
 # Libraries common to all targets
 LIB_FILES += \
