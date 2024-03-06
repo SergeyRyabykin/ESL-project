@@ -82,6 +82,7 @@
 
 #include "custom_service.h"
 #include "custom_buttons.h"
+#include "custom_leds.h"
 
 #define DEVICE_NAME                     "SergeyRyabykin"                             /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
@@ -111,20 +112,78 @@ static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        
 static ble_uuid_t m_adv_uuids[] =                                               /**< Universally unique service identifiers. */
 {
     {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE},
-    // TODO: 7. Add ESTC service UUID to the table
-    {CUSTOM_SERVICE_UUID, BLE_UUID_TYPE_BLE},
+    {CUSTOM_SERVICE_1_UUID, BLE_UUID_TYPE_BLE},
 };
 
-ble_estc_service_t m_estc_service = {
-    .custom_base_uuid = {
-        .uuid128 = CUSTOM_BASE_UUID
+static uint32_t char1_val = 0x01020304;
+static char char2_val[10] = "char2_val";
+static uint8_t char3_val = 1;
+
+const char char1_description[] = "User defined characteristic №1";
+const char char2_description[] = "User defined characteristic №2";
+const char char3_description[] = "User defined characteristic №3";
+
+ble_custom_characteristic_t char1 = {
+    .char_uuid.uuid = CUSTOM_GATT_CHAR_1_UUID,
+    .char_md = { 
+        .char_props.read = 1,
+        .char_props.write = 1,
+        .p_char_user_desc = (const uint8_t *) char1_description,
+        .char_user_desc_max_size = sizeof(char1_description),
+        .char_user_desc_size =  sizeof(char1_description)
     },
-    .service_uuid = {
-        .uuid = CUSTOM_SERVICE_UUID
+    .attr_md = {
+        .vloc = BLE_GATTS_VLOC_STACK,
+        .read_perm.sm = 1,
+        .read_perm.lv = 1,
+        .write_perm.sm = 1,
+        .write_perm.lv = 1,
     },
-    .char1_uuid = {
-        .uuid = CUSTOM_GATT_CHAR_1_UUID
-    }
+    .value = (uint8_t *)&char1_val,
+    .val_len = sizeof(char1_val)
+};
+
+ble_custom_characteristic_t char2 = {
+    .char_uuid.uuid = CUSTOM_GATT_CHAR_2_UUID,
+    .char_md = { 
+        .char_props.read = 1,
+        .p_char_user_desc = (const uint8_t *) char2_description,
+        .char_user_desc_max_size = sizeof(char2_description),
+        .char_user_desc_size =  sizeof(char2_description)
+    },
+    .attr_md = {
+        .vloc = BLE_GATTS_VLOC_STACK,
+        .read_perm.sm = 1,
+        .read_perm.lv = 1,
+    },
+    .value = (uint8_t *)&char2_val,
+    .val_len = sizeof(char2_val)
+};
+
+ble_custom_characteristic_t char3 = {
+    .char_uuid.uuid = CUSTOM_GATT_CHAR_3_UUID,
+    .char_md = { 
+        .char_props.write = 1,
+        .p_char_user_desc = (const uint8_t *) char3_description,
+        .char_user_desc_max_size = sizeof(char3_description),
+        .char_user_desc_size =  sizeof(char3_description)
+    },
+    .attr_md = {
+        .vloc = BLE_GATTS_VLOC_STACK,
+        .write_perm.sm = 1,
+        .write_perm.lv = 1,
+    },
+    .value = (uint8_t *)&char3_val,
+    .val_len = sizeof(char3_val)
+};
+
+ble_custom_characteristic_t *characteristics[] = {&char1, &char2, &char3};
+
+ble_custom_service_t m_estc_service = {
+    .base_service_uuid.uuid128 = CUSTOM_BASE_UUID,
+    .service_uuid.uuid = CUSTOM_SERVICE_1_UUID,
+    .p_characteristics = characteristics,
+    .char_num = ARRAY_SIZE(characteristics)
 };
 
 static void advertising_start(void);
@@ -226,8 +285,7 @@ static void services_init(void)
     APP_ERROR_CHECK(err_code);
 
     err_code = estc_ble_service_init(&m_estc_service);
-    NRF_LOG_INFO("eRROR: %X", err_code);
-    // APP_ERROR_CHECK(err_code);
+    APP_ERROR_CHECK(err_code);
 }
 
 
@@ -398,6 +456,9 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             APP_ERROR_CHECK(err_code);
             break;
 
+        case BLE_GATTS_EVT_WRITE:
+            custom_led_on(LED_B);
+
         default:
             // No implementation needed.
             break;
@@ -550,15 +611,17 @@ static void advertising_start(void)
     APP_ERROR_CHECK(err_code);
 }
 
+uint32_t leds[] = CUSTOM_LEDS_LIST;
 
 /**@brief Function for application main entry.
  */
 int main(void)
 {
     custom_button_pin_config(CUSTOM_BUTTON);
-    while(custom_button_is_released(CUSTOM_BUTTON)) {
-        idle_state_handle();
-    }
+    custom_led_all_pins_config(ARRAY_SIZE(leds), leds);
+    custom_leds_off_all(ARRAY_SIZE(leds), leds);
+
+
 
     // Initialize.
     log_init();

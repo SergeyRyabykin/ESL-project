@@ -231,6 +231,7 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/ble/ble_dtm \
   $(SDK_ROOT)/components/ble/ble_advertising \
   $(SDK_ROOT)/components \
+  $(SDK_ROOT)/components/libraries/bootloader/dfu \
   
 
 # Libraries common to all targets
