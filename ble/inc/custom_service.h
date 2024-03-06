@@ -26,10 +26,13 @@ typedef struct
 
     // TODO: 6.3. Add handles for characterstic (type: ble_gatts_char_handles_t)
     ble_gatts_char_handles_t char1_handles;
+    unsigned char *value;
+    unsigned int len;
+    const char *user_description;
 } ble_estc_service_t;
 
 ret_code_t estc_ble_service_init(ble_estc_service_t *service);
-// void estc_ble_service_on_ble_event(const ble_evt_t *ble_evt, void *ctx);
-// void estc_update_characteristic_1_value(ble_estc_service_t *service, int32_t *value);
+void estc_ble_service_on_ble_event(const ble_evt_t *ble_evt, void *ctx);
+void estc_update_characteristic_1_value(ble_estc_service_t *service, int32_t *value);
 
 #endif /* ESTC_SERVICE_H__ */

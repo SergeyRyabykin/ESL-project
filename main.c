@@ -82,6 +82,7 @@
 
 #include "custom_service.h"
 #include "custom_buttons.h"
+#include "custom_leds.h"
 
 #define DEVICE_NAME                     "SergeyRyabykin"                             /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
@@ -115,6 +116,7 @@ static ble_uuid_t m_adv_uuids[] =                                               
     {CUSTOM_SERVICE_UUID, BLE_UUID_TYPE_BLE},
 };
 
+static uint32_t attr_val = 0x01020304;
 ble_estc_service_t m_estc_service = {
     .custom_base_uuid = {
         .uuid128 = CUSTOM_BASE_UUID
@@ -124,7 +126,10 @@ ble_estc_service_t m_estc_service = {
     },
     .char1_uuid = {
         .uuid = CUSTOM_GATT_CHAR_1_UUID
-    }
+    },
+    .value = (unsigned char *)&attr_val,
+    .len = sizeof(attr_val),
+    .user_description = "Hello world!"
 };
 
 static void advertising_start(void);
@@ -226,8 +231,7 @@ static void services_init(void)
     APP_ERROR_CHECK(err_code);
 
     err_code = estc_ble_service_init(&m_estc_service);
-    NRF_LOG_INFO("eRROR: %X", err_code);
-    // APP_ERROR_CHECK(err_code);
+    APP_ERROR_CHECK(err_code);
 }
 
 
@@ -398,6 +402,9 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             APP_ERROR_CHECK(err_code);
             break;
 
+        case BLE_GATTS_EVT_WRITE:
+            custom_led_on(LED_B);
+
         default:
             // No implementation needed.
             break;
@@ -550,15 +557,17 @@ static void advertising_start(void)
     APP_ERROR_CHECK(err_code);
 }
 
+uint32_t leds[] = CUSTOM_LEDS_LIST;
 
 /**@brief Function for application main entry.
  */
 int main(void)
 {
     custom_button_pin_config(CUSTOM_BUTTON);
-    while(custom_button_is_released(CUSTOM_BUTTON)) {
-        idle_state_handle();
-    }
+    custom_led_all_pins_config(ARRAY_SIZE(leds), leds);
+    custom_leds_off_all(ARRAY_SIZE(leds), leds);
+
+
 
     // Initialize.
     log_init();
