@@ -81,6 +81,8 @@
 #include "nrf_log_backend_usb.h"
 
 #include "custom_service.h"
+#include "custom_buttons.h"
+#include "custom_leds.h"
 
 #define DEVICE_NAME                     "SergeyRyabykin"                             /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
@@ -114,6 +116,7 @@ static ble_uuid_t m_adv_uuids[] =                                               
     {CUSTOM_SERVICE_UUID, BLE_UUID_TYPE_BLE},
 };
 
+static uint32_t attr_val = 0x01020304;
 ble_estc_service_t m_estc_service = {
     .custom_base_uuid = {
         .uuid128 = CUSTOM_BASE_UUID
@@ -121,6 +124,12 @@ ble_estc_service_t m_estc_service = {
     .service_uuid = {
         .uuid = CUSTOM_SERVICE_UUID
     },
+    .char1_uuid = {
+        .uuid = CUSTOM_GATT_CHAR_1_UUID
+    },
+    .value = (unsigned char *)&attr_val,
+    .len = sizeof(attr_val),
+    .user_description = "Hello world!"
 };
 
 static void advertising_start(void);
@@ -393,6 +402,9 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             APP_ERROR_CHECK(err_code);
             break;
 
+        case BLE_GATTS_EVT_WRITE:
+            custom_led_on(LED_B);
+
         default:
             // No implementation needed.
             break;
@@ -476,6 +488,9 @@ static void advertising_init(void)
 
     init.evt_handler = on_adv_evt;
 
+    init.srdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
+    init.srdata.uuids_complete.p_uuids  = m_adv_uuids;
+
     err_code = ble_advertising_init(&m_advertising, &init);
     APP_ERROR_CHECK(err_code);
 
@@ -542,11 +557,18 @@ static void advertising_start(void)
     APP_ERROR_CHECK(err_code);
 }
 
+uint32_t leds[] = CUSTOM_LEDS_LIST;
 
 /**@brief Function for application main entry.
  */
 int main(void)
 {
+    custom_button_pin_config(CUSTOM_BUTTON);
+    custom_led_all_pins_config(ARRAY_SIZE(leds), leds);
+    custom_leds_off_all(ARRAY_SIZE(leds), leds);
+
+
+
     // Initialize.
     log_init();
     timers_init();
