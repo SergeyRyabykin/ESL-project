@@ -112,24 +112,78 @@ static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        
 static ble_uuid_t m_adv_uuids[] =                                               /**< Universally unique service identifiers. */
 {
     {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE},
-    // TODO: 7. Add ESTC service UUID to the table
-    {CUSTOM_SERVICE_UUID, BLE_UUID_TYPE_BLE},
+    {CUSTOM_SERVICE_1_UUID, BLE_UUID_TYPE_BLE},
 };
 
-static uint32_t attr_val = 0x01020304;
-ble_estc_service_t m_estc_service = {
-    .custom_base_uuid = {
-        .uuid128 = CUSTOM_BASE_UUID
+static uint32_t char1_val = 0x01020304;
+static char char2_val[10] = "char2_val";
+static uint8_t char3_val = 1;
+
+const char char1_description[] = "User defined characteristic №1";
+const char char2_description[] = "User defined characteristic №2";
+const char char3_description[] = "User defined characteristic №3";
+
+ble_custom_characteristic_t char1 = {
+    .char_uuid.uuid = CUSTOM_GATT_CHAR_1_UUID,
+    .char_md = { 
+        .char_props.read = 1,
+        .char_props.write = 1,
+        .p_char_user_desc = (const uint8_t *) char1_description,
+        .char_user_desc_max_size = sizeof(char1_description),
+        .char_user_desc_size =  sizeof(char1_description)
     },
-    .service_uuid = {
-        .uuid = CUSTOM_SERVICE_UUID
+    .attr_md = {
+        .vloc = BLE_GATTS_VLOC_STACK,
+        .read_perm.sm = 1,
+        .read_perm.lv = 1,
+        .write_perm.sm = 1,
+        .write_perm.lv = 1,
     },
-    .char1_uuid = {
-        .uuid = CUSTOM_GATT_CHAR_1_UUID
+    .value = (uint8_t *)&char1_val,
+    .val_len = sizeof(char1_val)
+};
+
+ble_custom_characteristic_t char2 = {
+    .char_uuid.uuid = CUSTOM_GATT_CHAR_2_UUID,
+    .char_md = { 
+        .char_props.read = 1,
+        .p_char_user_desc = (const uint8_t *) char2_description,
+        .char_user_desc_max_size = sizeof(char2_description),
+        .char_user_desc_size =  sizeof(char2_description)
     },
-    .value = (unsigned char *)&attr_val,
-    .len = sizeof(attr_val),
-    .user_description = "Hello world!"
+    .attr_md = {
+        .vloc = BLE_GATTS_VLOC_STACK,
+        .read_perm.sm = 1,
+        .read_perm.lv = 1,
+    },
+    .value = (uint8_t *)&char2_val,
+    .val_len = sizeof(char2_val)
+};
+
+ble_custom_characteristic_t char3 = {
+    .char_uuid.uuid = CUSTOM_GATT_CHAR_3_UUID,
+    .char_md = { 
+        .char_props.write = 1,
+        .p_char_user_desc = (const uint8_t *) char3_description,
+        .char_user_desc_max_size = sizeof(char3_description),
+        .char_user_desc_size =  sizeof(char3_description)
+    },
+    .attr_md = {
+        .vloc = BLE_GATTS_VLOC_STACK,
+        .write_perm.sm = 1,
+        .write_perm.lv = 1,
+    },
+    .value = (uint8_t *)&char3_val,
+    .val_len = sizeof(char3_val)
+};
+
+ble_custom_characteristic_t *characteristics[] = {&char1, &char2, &char3};
+
+ble_custom_service_t m_estc_service = {
+    .base_service_uuid.uuid128 = CUSTOM_BASE_UUID,
+    .service_uuid.uuid = CUSTOM_SERVICE_1_UUID,
+    .p_characteristics = characteristics,
+    .char_num = ARRAY_SIZE(characteristics)
 };
 
 static void advertising_start(void);
