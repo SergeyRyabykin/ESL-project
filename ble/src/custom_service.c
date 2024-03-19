@@ -9,9 +9,21 @@
 
 #include <string.h>
 
+#define CCCD_VALUE_LENGTH 2
+
+
+
+
+
+
+
+
+
+
+
 static ret_code_t estc_ble_add_characteristics(ble_custom_service_t *service);
 
-ret_code_t estc_ble_service_init(ble_custom_service_t *service)
+ret_code_t custom_ble_service_init(ble_custom_service_t *service)
 {
     ret_code_t error_code = NRF_SUCCESS;
 
@@ -61,3 +73,38 @@ static ret_code_t estc_ble_add_characteristics(ble_custom_service_t *service)
     
     return error_code;
 }
+
+
+ret_code_t custom_ble_get_cccd(uint16_t conn_handle, ble_custom_characteristic_t *characteristic, uint16_t *cccd_value)
+{
+    ret_code_t ret;
+
+    ble_gatts_value_t cccd = {
+        .len = CCCD_VALUE_LENGTH,
+        .offset = 0,
+        .p_value = (uint8_t *)cccd_value
+    };
+
+    // Get client characteristic configuration descriptor
+    ret = sd_ble_gatts_value_get(conn_handle, characteristic->char_handles.cccd_handle, &cccd);
+
+    return ret;
+}
+
+ret_code_t custom_ble_send_characteristic_value(uint16_t conn_handle, ble_custom_characteristic_t *characteristic, uint16_t type)
+{
+    ret_code_t ret;
+   
+    ble_gatts_hvx_params_t hvx_params = {
+        .handle = characteristic->char_handles.value_handle,
+        .type = type,
+        .offset = 0,
+        .p_len = (uint16_t*)&characteristic->val_len,
+        .p_data = characteristic->value
+    };
+
+    ret = sd_ble_gatts_hvx(conn_handle, &hvx_params);
+
+    return ret;
+}
+

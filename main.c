@@ -81,8 +81,10 @@
 #include "nrf_log_backend_usb.h"
 
 #include "custom_service.h"
-#include "custom_buttons.h"
-#include "custom_leds.h"
+#include "custom_vptr_queue.h"
+
+#include "app_timer.h"
+#include "nrf_drv_clock.h"
 
 #define DEVICE_NAME                     "SergeyRyabykin"                             /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
@@ -103,9 +105,14 @@
 
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
+
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
+
+APP_TIMER_DEF(indication_timer);
+APP_TIMER_DEF(notification_timer);
+
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
 
@@ -115,19 +122,39 @@ static ble_uuid_t m_adv_uuids[] =                                               
     {CUSTOM_SERVICE_1_UUID, BLE_UUID_TYPE_BLE},
 };
 
-static uint32_t char1_val = 0x01020304;
-static char char2_val[10] = "char2_val";
-static uint8_t char3_val = 1;
+static volatile bool g_is_indicating = false; ///< Flag to watch if the clint's acknowledge was received
+
+static uint32_t g_char1_val = 0x0;
+static uint32_t g_char2_val = 0x0;
+
+static void process_indication_queue(void);
+custom_vptr_queue_t indication_queue = CUSTOM_VPTR_QUEUE_INIT_VALUES(&g_is_indicating, process_indication_queue);
+
+static void process_indication_queue(void)
+{
+    ret_code_t ret;
+    // ble_custom_characteristic_t *target = NULL;
+    void *target = NULL;
+
+    ret = custom_vptr_queue_get(&target, &indication_queue);
+
+    if(NRF_SUCCESS == ret && target){
+        ret = custom_ble_send_characteristic_value(m_conn_handle, target, BLE_GATT_HVX_INDICATION);
+        if(NRF_SUCCESS == ret){
+            g_is_indicating = true;
+        }
+    }
+}
 
 const char char1_description[] = "User defined characteristic №1";
 const char char2_description[] = "User defined characteristic №2";
-const char char3_description[] = "User defined characteristic №3";
 
 ble_custom_characteristic_t char1 = {
     .char_uuid.uuid = CUSTOM_GATT_CHAR_1_UUID,
     .char_md = { 
         .char_props.read = 1,
         .char_props.write = 1,
+        .char_props.notify = 1,
         .p_char_user_desc = (const uint8_t *) char1_description,
         .char_user_desc_max_size = sizeof(char1_description),
         .char_user_desc_size =  sizeof(char1_description)
@@ -139,14 +166,15 @@ ble_custom_characteristic_t char1 = {
         .write_perm.sm = 1,
         .write_perm.lv = 1,
     },
-    .value = (uint8_t *)&char1_val,
-    .val_len = sizeof(char1_val)
+    .value = (uint8_t *)&g_char1_val,
+    .val_len = sizeof(g_char1_val)
 };
 
 ble_custom_characteristic_t char2 = {
     .char_uuid.uuid = CUSTOM_GATT_CHAR_2_UUID,
     .char_md = { 
         .char_props.read = 1,
+        .char_props.indicate = 1,
         .p_char_user_desc = (const uint8_t *) char2_description,
         .char_user_desc_max_size = sizeof(char2_description),
         .char_user_desc_size =  sizeof(char2_description)
@@ -156,28 +184,11 @@ ble_custom_characteristic_t char2 = {
         .read_perm.sm = 1,
         .read_perm.lv = 1,
     },
-    .value = (uint8_t *)&char2_val,
-    .val_len = sizeof(char2_val)
+    .value = (uint8_t *)&g_char2_val,
+    .val_len = sizeof(g_char2_val)
 };
 
-ble_custom_characteristic_t char3 = {
-    .char_uuid.uuid = CUSTOM_GATT_CHAR_3_UUID,
-    .char_md = { 
-        .char_props.write = 1,
-        .p_char_user_desc = (const uint8_t *) char3_description,
-        .char_user_desc_max_size = sizeof(char3_description),
-        .char_user_desc_size =  sizeof(char3_description)
-    },
-    .attr_md = {
-        .vloc = BLE_GATTS_VLOC_STACK,
-        .write_perm.sm = 1,
-        .write_perm.lv = 1,
-    },
-    .value = (uint8_t *)&char3_val,
-    .val_len = sizeof(char3_val)
-};
-
-ble_custom_characteristic_t *characteristics[] = {&char1, &char2, &char3};
+ble_custom_characteristic_t *characteristics[] = {&char1, &char2};
 
 ble_custom_service_t m_estc_service = {
     .base_service_uuid.uuid128 = CUSTOM_BASE_UUID,
@@ -186,8 +197,62 @@ ble_custom_service_t m_estc_service = {
     .char_num = ARRAY_SIZE(characteristics)
 };
 
-static void advertising_start(void);
+static void char1_timer_timeout_handler(void *context)
+{
+    ret_code_t ret;
+    uint16_t type = BLE_GATT_HVX_INVALID;
 
+    ret = custom_ble_get_cccd(m_conn_handle, &char1, &type);
+
+    if(NRF_SUCCESS == ret && BLE_GATT_HVX_INVALID != type){
+        custom_ble_send_characteristic_value(m_conn_handle, &char1, type);
+    }
+
+    g_char1_val++;
+}
+
+static void char2_timer_timeout_handler(void *context)
+{
+    ret_code_t ret;
+
+    uint16_t type = BLE_GATT_HVX_INVALID;
+
+    ret = custom_ble_get_cccd(m_conn_handle, &char2, &type);
+
+    if(NRF_SUCCESS == ret && BLE_GATT_HVX_INDICATION == type){
+        custom_vptr_queue_add(&indication_queue, &char2);
+    }
+
+    g_char2_val++;
+}
+
+
+
+static uint32_t custom_timers_init(void)
+{
+    ret_code_t ret = 0;
+
+    ret = nrf_drv_clock_init();
+    if (NRF_SUCCESS != ret && NRF_ERROR_MODULE_ALREADY_INITIALIZED != ret) {
+        return ret;
+    }
+
+    nrf_drv_clock_lfclk_request(NULL);
+
+    ret = app_timer_create(&indication_timer, APP_TIMER_MODE_REPEATED, char2_timer_timeout_handler);
+    if(NRF_SUCCESS != ret) {
+        return ret;
+    }
+
+    ret = app_timer_create(&notification_timer, APP_TIMER_MODE_REPEATED, char1_timer_timeout_handler);
+    if(NRF_SUCCESS != ret) {
+        return ret;
+    }
+
+    return ret;
+}
+
+static void advertising_start(void);
 
 /**@brief Callback function for asserts in the SoftDevice.
  *
@@ -284,7 +349,7 @@ static void services_init(void)
     err_code = nrf_ble_qwr_init(&m_qwr, &qwr_init);
     APP_ERROR_CHECK(err_code);
 
-    err_code = estc_ble_service_init(&m_estc_service);
+    err_code = custom_ble_service_init(&m_estc_service);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -415,6 +480,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         case BLE_GAP_EVT_DISCONNECTED:
             NRF_LOG_INFO("Disconnected (conn_handle: %d)", p_ble_evt->evt.gap_evt.conn_handle);
             // LED indication will be changed when advertising starts.
+            app_timer_stop(notification_timer);
+            app_timer_stop(indication_timer);
             break;
 
         case BLE_GAP_EVT_CONNECTED:
@@ -426,6 +493,9 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
             APP_ERROR_CHECK(err_code);
+
+            app_timer_start(notification_timer, APP_TIMER_TICKS(1000), NULL);
+            app_timer_start(indication_timer, APP_TIMER_TICKS(1700), NULL);
             break;
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
@@ -456,10 +526,29 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             APP_ERROR_CHECK(err_code);
             break;
 
+        case BLE_GATTS_EVT_HVN_TX_COMPLETE:
+            NRF_LOG_INFO("BLE_GATTS_EVT_HVN_TX_COMPLETE");
+            // TODO: Notification transmission complete
+            break; 
+
+        case BLE_GATTS_EVT_HVC:
+            NRF_LOG_INFO("BLE_GATTS_EVT_HVC");
+
+            if(!custom_vptr_queue_is_empty(&indication_queue)){
+                process_indication_queue();
+            }
+            else {
+                g_is_indicating = false;
+            }
+
+            break;
+
         case BLE_GATTS_EVT_WRITE:
-            custom_led_on(LED_B);
+            NRF_LOG_INFO("BLE_GATTS_EVT_WRITE");
+            break;
 
         default:
+            NRF_LOG_INFO("default: %x", p_ble_evt->header.evt_id);
             // No implementation needed.
             break;
     }
@@ -611,17 +700,11 @@ static void advertising_start(void)
     APP_ERROR_CHECK(err_code);
 }
 
-uint32_t leds[] = CUSTOM_LEDS_LIST;
-
 /**@brief Function for application main entry.
  */
 int main(void)
 {
-    custom_button_pin_config(CUSTOM_BUTTON);
-    custom_led_all_pins_config(ARRAY_SIZE(leds), leds);
-    custom_leds_off_all(ARRAY_SIZE(leds), leds);
-
-
+    ret_code_t ret;
 
     // Initialize.
     log_init();
@@ -637,9 +720,12 @@ int main(void)
 
     // Start execution.
     NRF_LOG_INFO("ESTC GATT server example started");
+    // Must be called after app_timer_init()
     application_timers_start();
-
     advertising_start();
+
+    ret = custom_timers_init();
+    APP_ERROR_CHECK(ret);
 
     // Enter main loop.
     for (;;)

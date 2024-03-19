@@ -31,8 +31,18 @@ typedef struct {
     unsigned int char_num;
 } ble_custom_service_t;
 
-ret_code_t estc_ble_service_init(ble_custom_service_t *service);
+ret_code_t custom_ble_service_init(ble_custom_service_t *service);
 // void estc_ble_service_on_ble_event(const ble_evt_t *ble_evt, void *ctx);
-// void estc_update_characteristic_1_value(ble_custom_service_t *service, int32_t *value);
+
+/**
+ * @brief Function to get client characteristic configuration descriptor
+ * 
+ * @param [in] conn_handle Connection handle 
+ * @param [in] characteristic Pointer to characteristic to get the CCCD value
+ * @param [out] cccd_value Pointer to variable to save CCCD value
+ * @return ret_code_t NRF return values
+ */
+ret_code_t custom_ble_get_cccd(uint16_t conn_handle, ble_custom_characteristic_t *characteristic, uint16_t *cccd_value);
+ret_code_t custom_ble_send_characteristic_value(uint16_t conn_handle, ble_custom_characteristic_t *characteristic, uint16_t type);
 
 #endif /* ESTC_SERVICE_H__ */
