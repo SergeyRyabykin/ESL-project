@@ -15,6 +15,7 @@ void custom_led_all_pins_config(unsigned int num, const uint32_t pins[num])
 {
     for(unsigned int i = 0; i < num; i++) {
         custom_led_pin_config(pins[i]);
+        custom_led_off(pins[i]);
     }
 }
 
