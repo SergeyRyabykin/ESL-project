@@ -10,6 +10,8 @@
 #include "custom_nvm.h"
 #include "custom_app_defines.h"
 
+#include "custom_ble.h"
+
 #define PWM_PLAYBACK_COUNT 1
 
 static nrf_pwm_values_individual_t g_pwm_values;
@@ -102,6 +104,32 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
     custom_app_process_pwm_indicator(&g_app_pwm_ind_ctx);
 }
 
+
+
+
+/**@brief Function for initializing power management.
+ */
+// static void power_management_init(void)
+// {
+//     ret_code_t err_code;
+//     err_code = nrf_pwr_mgmt_init();
+//     APP_ERROR_CHECK(err_code);
+// }
+
+
+/**@brief Function for handling the idle state (main loop).
+ *
+ * @details If there is no pending log operation, then sleep until next the next event occurs.
+ */
+// static void idle_state_handle(void)
+// {
+//     if (NRF_LOG_PROCESS() == false)
+//     {
+//         nrf_pwr_mgmt_run();
+//     }
+// 	LOG_BACKEND_USB_PROCESS();
+// }
+
 int main(void)
 {
     // To erase user app non-volatile memory
@@ -153,7 +181,11 @@ int main(void)
     APP_ERROR_CHECK(ret);
     nrfx_pwm_simple_playback(&g_pwm_inst, &g_pwm_sequence, PWM_PLAYBACK_COUNT, NRFX_PWM_FLAG_LOOP);
 
+    // power_management_init();
+    custom_ble_init();
+
     while(true) {
+
 #ifdef ESTC_USB_CLI_ENABLED
         if(executor_ctx.cmd) {
             ret = executor_ctx.cmd->cmd_execute(executor_ctx.cmd_str, executor_ctx.context);
@@ -166,6 +198,7 @@ int main(void)
 
         LOG_BACKEND_USB_PROCESS();
         NRF_LOG_PROCESS();
+        // idle_state_handle();
     }   
 }
 
