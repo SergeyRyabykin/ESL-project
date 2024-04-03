@@ -33,8 +33,6 @@
 #include "custom_service.h"
 #include "custom_vptr_queue.h"
 
-#include "custom_leds.h"
-
 #define DEVICE_NAME                     "SergeyRyabykin"                             /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
@@ -185,7 +183,6 @@ ble_custom_service_t m_estc_service = {
  */
 void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 {
-    // custom_led_on(LED_R);
     while(1) {
         // NRF_LOG_INFO("%d : %s", line_num, p_file_name);
         // LOG_BACKEND_USB_PROCESS();
@@ -467,6 +464,29 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     }
 }
 
+// /**
+//  * @brief SoftDevice SoC event handler.
+//  *
+//  * @param[in] evt_id    SoC event.
+//  * @param[in] p_context Context.
+//  */
+// static void soc_evt_handler(uint32_t evt_id, void * p_context)
+// {
+//     bool *is_busy = (bool *)p_context;
+//     switch (evt_id)
+//     {
+//         case NRF_EVT_FLASH_OPERATION_SUCCESS:
+//             NRF_LOG_INFO("NVM was written");
+//             *is_busy = false;
+//             break;
+//         case NRF_EVT_FLASH_OPERATION_ERROR:
+//             NRF_LOG_INFO("NVM error");
+//             *is_busy = false;
+//             break;
+//         default:
+//             break;
+//     }
+// }
 
 /**@brief Function for initializing the BLE stack.
  *
@@ -491,6 +511,7 @@ static void ble_stack_init(void)
 
     // Register a handler for BLE events.
     NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
+    // NRF_SDH_SOC_OBSERVER(m_soc_observer, APP_SOC_OBSERVER_PRIO, soc_evt_handler, g_context_ptr);
 }
 
 /**@brief Function for initializing the Advertising functionality.
