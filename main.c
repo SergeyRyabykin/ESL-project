@@ -122,15 +122,15 @@ ret_code_t custom_default_color_rewrite(void)
         return ret;
     }
 
-    while(g_flash_is_busy){
-        // Nop
-    }
+    // while(g_flash_is_busy){
+    //     // Nop
+    // }
 
-    ret = custom_nvm_discard_by_id(DEFAULT_HSV_COLOR_ID);
+    // ret = custom_nvm_discard_by_id(DEFAULT_HSV_COLOR_ID);
 
-    if(NRF_SUCCESS == ret) {
-        g_flash_is_busy = true;
-    }
+    // if(NRF_SUCCESS == ret) {
+    //     g_flash_is_busy = true;
+    // }
 
     NRF_LOG_INFO("Default color saved!");
     // uintptr_t addr = START_ADDR;
@@ -212,8 +212,8 @@ static void soc_evt_handler(uint32_t evt_id, void * p_context)
         case NRF_EVT_FLASH_OPERATION_SUCCESS:
             NRF_LOG_INFO("NVM was written");
             uintptr_t addr = START_ADDR;
-            for(int i = 0; i < 24; i++) {
-                NRF_LOG_INFO("%d : %x", i, *((uint8_t *)addr + i));
+            for(int i = 0; i < 10; i++) {
+                NRF_LOG_INFO("%x : %x", addr + i*4, *((uint32_t *)addr + i));
             }
             g_flash_is_busy = false;
             break;
@@ -268,16 +268,16 @@ int main(void)
         g_custom_hsv_ctx.color.saturation = ((custom_hsv_t *)saved_object)->saturation;
         g_custom_hsv_ctx.color.value = ((custom_hsv_t *)saved_object)->value;
     }
-    else {
-        while(g_flash_is_busy) {
-            // Nop
-        }
-        ret = custom_nvm_save(&g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color), DEFAULT_HSV_COLOR_ID);
-        APP_ERROR_CHECK(ret);
-        if(NRF_SUCCESS == ret) {
-            g_flash_is_busy = true;
-        }
-    }
+    // else {
+    //     while(g_flash_is_busy) {
+    //         // Nop
+    //     }
+    //     ret = custom_nvm_save(&g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color), DEFAULT_HSV_COLOR_ID);
+    //     APP_ERROR_CHECK(ret);
+    //     if(NRF_SUCCESS == ret) {
+    //         g_flash_is_busy = true;
+    //     }
+    // }
 
     uint8_t r, g, b;
     custom_hsv_to_rgb(&g_custom_hsv_ctx.color, &r, &g, &b);

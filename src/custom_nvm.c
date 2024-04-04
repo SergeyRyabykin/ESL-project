@@ -6,6 +6,8 @@
 
 #include "nrf_soc.h"
 
+#include "custom_log.h"
+
 typedef uint16_t custom_nvm_record_validity_t;
 typedef uint8_t custom_nvm_payload_size_t; // CUSTOM_PAYLOAD_MAX_SIZE is maximum payload_size
 
@@ -80,6 +82,17 @@ static ret_code_t custom_nvm_write_record(const void *object, const size_t objec
     memcpy(record_array, &info, sizeof(info));
     memcpy(&record_array[CUSTOM_NVM_SIZE_IN_WORDS(sizeof(info))], object, object_size);
 
+    NRF_LOG_INFO("Before writing:");
+    uintptr_t my_addr = CUSTOM_APP_DATA_AREA_START_ADDR;
+    for(int i = 0; i < 10; i++) {
+        NRF_LOG_INFO("%x : %x", my_addr + i*4, *((uint32_t *)my_addr + i));
+    }
+
+    NRF_LOG_INFO("Must be written:");
+    for(int i = 0; i < record_size_w; i++) {
+        NRF_LOG_INFO("%x : %X", addr + i*4, record_array[i]);
+    }
+
     return sd_flash_write((uint32_t *)addr, record_array, record_size_w);
     // for(int i = record_size_w - 1; i >= 0 ; i--){
     //     uintptr_t current_word_addr = addr + i * sizeof(uint32_t);
@@ -146,6 +159,11 @@ static ret_code_t custom_nvm_discard_record(const uintptr_t record_addr)
 
     memcpy(record_array, &invalid, sizeof(invalid));
 
+    NRF_LOG_INFO("To be discarded:");
+    for(int i = 0; i < CUSTOM_NVM_RECORD_SIZE_IN_WORDS(sizeof(custom_nvm_record_info_t)); i++) {
+        NRF_LOG_INFO("%x : %X", record_addr + i*4, record_array[i]);
+    }
+    
     return sd_flash_write((uint32_t *)record_addr, record_array, CUSTOM_NVM_RECORD_SIZE_IN_WORDS(sizeof(custom_nvm_record_info_t)));
     // for(int i = 0; i < CUSTOM_NVM_RECORD_SIZE_IN_WORDS(sizeof(custom_nvm_record_info_t)); i++) {
     //     uintptr_t current_word_addr = record_addr + i * sizeof(uint32_t);
