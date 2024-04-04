@@ -11,23 +11,12 @@
 #include "custom_app_defines.h"
 
 #include "custom_ble.h"
-#include "nrf_sdh_soc.h"
 
-#include "app_util.h"
-#include "nrf_dfu_types.h"
-
-
-// #include "custom_leds.h"
-// #include "nrf_delay.h"
+#include "custom_record.h"
 
 #define PWM_PLAYBACK_COUNT 1
-#define APP_SOC_OBSERVER_PRIO           1                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 
-#define START_ADDR ((uint32_t)(BOOTLOADER_ADDRESS - NRF_DFU_APP_DATA_AREA_SIZE))
-
-
-static volatile bool g_flash_is_busy = false;
-static volatile bool g_color_must_be_saved = false;
+volatile bool g_must_be_updated = false;
 
 static nrf_pwm_values_individual_t g_pwm_values;
 static custom_hsv_ctx_t g_custom_hsv_ctx = {
@@ -78,67 +67,10 @@ static nrf_pwm_sequence_t g_pwm_sequence = {
     .repeats = 100,
 };
 
-// static void led_on(uint8_t led)
-// {
-//     switch (led) {
-//         case 1:
-//             g_pwm_values.channel_1 = CUSTOM_RGB_STEP * 255;
-//             g_pwm_values.channel_2 = 0;
-//             g_pwm_values.channel_3 = 0;
-//             break;
-//         case 2:
-//             g_pwm_values.channel_1 = 0;
-//             g_pwm_values.channel_2 = CUSTOM_RGB_STEP * 255;
-//             g_pwm_values.channel_3 = 0;
-//             break;
-//         case 3:
-//             g_pwm_values.channel_1 = 0;
-//             g_pwm_values.channel_2 = 0;
-//             g_pwm_values.channel_3 = CUSTOM_RGB_STEP * 255;
-//             break;
-//         default:
-//             break;
-//     }
-// }
-
 // Function to process call if APP_ERROR_CHECK macros failed
 void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info)
 {
     NRF_LOG_INFO("ERROR: %x", id);
-}
-
-ret_code_t custom_default_color_rewrite(void)
-{
-    while(g_flash_is_busy) {
-        // Nop
-    }
-
-    ret_code_t ret = custom_nvm_save(&g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color), DEFAULT_HSV_COLOR_ID);
-
-    if(NRF_SUCCESS == ret) {
-        g_flash_is_busy = true;
-    }
-    else {
-        return ret;
-    }
-
-    // while(g_flash_is_busy){
-    //     // Nop
-    // }
-
-    // ret = custom_nvm_discard_by_id(DEFAULT_HSV_COLOR_ID);
-
-    // if(NRF_SUCCESS == ret) {
-    //     g_flash_is_busy = true;
-    // }
-
-    NRF_LOG_INFO("Default color saved!");
-    // uintptr_t addr = START_ADDR;
-    // for(int i = 0; i < 24; i++) {
-    //     NRF_LOG_INFO("%d : %x", i, *((uint8_t *)addr + i));
-    // }
-
-    return ret;
 }
 
 void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
@@ -147,8 +79,7 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
         custom_app_set_pwm_indicator(custom_app_change_state(), &g_app_pwm_ind_ctx);
 
         if(DEFAULT_MODE == custom_app_get_state()) {
-            NRF_LOG_INFO("Default mode.");
-            g_color_must_be_saved = true;
+            g_must_be_updated = true;
         }
 
         custom_button_process(CUSTOM_BUTTON);
@@ -171,8 +102,6 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
     
     custom_app_process_pwm_indicator(&g_app_pwm_ind_ctx);
 }
-
-
 
 
 /**@brief Function for initializing power management.
@@ -198,54 +127,30 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
 // 	LOG_BACKEND_USB_PROCESS();
 // }
 
-/**
- * @brief SoftDevice SoC event handler.
- *
- * @param[in] evt_id    SoC event.
- * @param[in] p_context Context.
- */
-static void soc_evt_handler(uint32_t evt_id, void * p_context)
-{
-    // volatile uint8_t *is_busy = (volatile uint8_t *)p_context;
-    switch (evt_id)
-    {
-        case NRF_EVT_FLASH_OPERATION_SUCCESS:
-            NRF_LOG_INFO("NVM was written");
-            uintptr_t addr = START_ADDR;
-            for(int i = 0; i < 10; i++) {
-                NRF_LOG_INFO("%x : %x", addr + i*4, *((uint32_t *)addr + i));
-            }
-            g_flash_is_busy = false;
-            break;
-        case NRF_EVT_FLASH_OPERATION_ERROR:
-            NRF_LOG_INFO("NVM error");
-            g_flash_is_busy = false;
-            break;
-        default:
-            break;
-    }
-}
-
-// static uint32_t leds[] = CUSTOM_LEDS_LIST;
 
 int main(void)
 {
-    // custom_led_all_pins_config(ARRAY_SIZE(leds), leds);
-
-    // To erase user app non-volatile memory
-    custom_button_pin_config(CUSTOM_BUTTON);
-    if(custom_button_is_pressed(CUSTOM_BUTTON)) {
-        custom_nvm_erase();
-        while(custom_button_is_pressed(CUSTOM_BUTTON)) {
-            ;
-        }
-    }
-
     uint32_t ret = 0;
+
     // Log initialization
     ret = NRF_LOG_INIT(NULL);
     APP_ERROR_CHECK(ret);
     NRF_LOG_DEFAULT_BACKENDS_INIT();
+
+    custom_button_pin_config(CUSTOM_BUTTON);
+
+    custom_ble_init();
+
+    ret = custom_record_storage_init();
+    APP_ERROR_CHECK(ret);
+
+    // To erase user app non-volatile memory
+    if(custom_button_is_pressed(CUSTOM_BUTTON)) {
+        ret = custom_record_erase(FILE_ID);
+        while(custom_button_is_pressed(CUSTOM_BUTTON)) {
+            ;
+        }
+    }
 
 #ifdef ESTC_USB_CLI_ENABLED
     ret = custom_cli_init(&g_custom_app_ctx);
@@ -258,26 +163,13 @@ int main(void)
     ret = custom_button_event_enable(CUSTOM_BUTTON, &g_gpiote_cfg);
     APP_ERROR_CHECK(ret);
 
-    custom_ble_init();
-    NRF_SDH_SOC_OBSERVER(m_soc_observer, APP_SOC_OBSERVER_PRIO, soc_evt_handler, NULL); // Move to custom_nvm module
-    // (void)soc_evt_handler;
+    ret = custom_record_read(DEFAULT_HSV_COLOR_ID, &g_custom_hsv_ctx.color);
+    APP_ERROR_CHECK(ret);
 
-    uintptr_t saved_object = custom_nvm_find(DEFAULT_HSV_COLOR_ID);
-    if(saved_object) {
-        g_custom_hsv_ctx.color.hue = ((custom_hsv_t *)saved_object)->hue;
-        g_custom_hsv_ctx.color.saturation = ((custom_hsv_t *)saved_object)->saturation;
-        g_custom_hsv_ctx.color.value = ((custom_hsv_t *)saved_object)->value;
+    if(NRF_SUCCESS != ret) {
+        ret = custom_record_save(DEFAULT_HSV_COLOR_ID, &g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
+        APP_ERROR_CHECK(ret);
     }
-    // else {
-    //     while(g_flash_is_busy) {
-    //         // Nop
-    //     }
-    //     ret = custom_nvm_save(&g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color), DEFAULT_HSV_COLOR_ID);
-    //     APP_ERROR_CHECK(ret);
-    //     if(NRF_SUCCESS == ret) {
-    //         g_flash_is_busy = true;
-    //     }
-    // }
 
     uint8_t r, g, b;
     custom_hsv_to_rgb(&g_custom_hsv_ctx.color, &r, &g, &b);
@@ -303,10 +195,11 @@ int main(void)
             executor_ctx.cmd = NULL;
         }
 #endif        
-        if(g_color_must_be_saved) {
-            ret = custom_default_color_rewrite();
+
+        if(g_must_be_updated) {
+            ret_code_t ret = custom_record_update(DEFAULT_HSV_COLOR_ID, &g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
             APP_ERROR_CHECK(ret);
-            g_color_must_be_saved = false;
+            g_must_be_updated = false;
         }
 
         LOG_BACKEND_USB_PROCESS();
