@@ -16,6 +16,11 @@
 
 #define PWM_PLAYBACK_COUNT 1
 
+static custom_record_t default_record = {
+    .record.file_id = FILE_ID,
+    .record.key = DEFAULT_HSV_COLOR_ID
+};
+
 volatile bool g_must_be_updated = false;
 
 static nrf_pwm_values_individual_t g_pwm_values;
@@ -163,11 +168,11 @@ int main(void)
     ret = custom_button_event_enable(CUSTOM_BUTTON, &g_gpiote_cfg);
     APP_ERROR_CHECK(ret);
 
-    ret = custom_record_read(DEFAULT_HSV_COLOR_ID, &g_custom_hsv_ctx.color);
+    ret = custom_record_read(&default_record, &g_custom_hsv_ctx.color);
     APP_ERROR_CHECK(ret);
 
     if(NRF_SUCCESS != ret) {
-        ret = custom_record_save(DEFAULT_HSV_COLOR_ID, &g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
+        ret = custom_record_save(&default_record, &g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
         APP_ERROR_CHECK(ret);
     }
 
@@ -197,7 +202,7 @@ int main(void)
 #endif        
 
         if(g_must_be_updated) {
-            ret_code_t ret = custom_record_update(DEFAULT_HSV_COLOR_ID, &g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
+            ret_code_t ret = custom_record_update(&default_record, &g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
             APP_ERROR_CHECK(ret);
             g_must_be_updated = false;
         }
