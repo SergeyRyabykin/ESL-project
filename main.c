@@ -7,12 +7,11 @@
 #include "custom_app.h"
 #include "custom_hsv.h"
 #include "custom_log.h"
-#include "custom_nvm.h"
+#include "custom_record.h"
 #include "custom_app_defines.h"
 
 #include "custom_ble.h"
 
-#include "custom_record.h"
 
 #define PWM_PLAYBACK_COUNT 1
 
@@ -144,7 +143,7 @@ int main(void)
 
     custom_button_pin_config(CUSTOM_BUTTON);
 
-    custom_ble_init();
+    custom_ble_init(&g_custom_hsv_ctx.color);
 
     ret = custom_record_storage_init();
     APP_ERROR_CHECK(ret);
@@ -205,6 +204,7 @@ int main(void)
             ret_code_t ret = custom_record_update(&default_record, &g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
             APP_ERROR_CHECK(ret);
             g_must_be_updated = false;
+            custom_ble_notify_color_changed();
         }
 
         LOG_BACKEND_USB_PROCESS();

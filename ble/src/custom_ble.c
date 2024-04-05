@@ -32,6 +32,7 @@
 
 #include "custom_service.h"
 #include "custom_vptr_queue.h"
+#include "custom_ble.h"
 
 #define DEVICE_NAME                     "SergeyRyabykin"                             /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
@@ -68,7 +69,7 @@ static ble_uuid_t m_adv_uuids[] =                                               
 static volatile bool g_is_indicating = false; ///< Flag to watch if the clint's acknowledge was received
 
 static uint32_t g_char1_val = 0x0;
-static uint32_t g_char2_val = 0x0;
+// static uint32_t g_char2_val = 0x0;
 
 static void process_indication_queue(void);
 custom_vptr_queue_t indication_queue = CUSTOM_VPTR_QUEUE_INIT_VALUES(&g_is_indicating, process_indication_queue);
@@ -118,7 +119,7 @@ ble_custom_characteristic_t char2 = {
     .char_uuid.uuid = CUSTOM_GATT_CHAR_2_UUID,
     .char_md = { 
         .char_props.read = 1,
-        .char_props.indicate = 1,
+        .char_props.notify = 1,
         .p_char_user_desc = (const uint8_t *) char2_description,
         .char_user_desc_max_size = sizeof(char2_description),
         .char_user_desc_size =  sizeof(char2_description)
@@ -128,8 +129,8 @@ ble_custom_characteristic_t char2 = {
         .read_perm.sm = 1,
         .read_perm.lv = 1,
     },
-    .value = (uint8_t *)&g_char2_val,
-    .val_len = sizeof(g_char2_val)
+    // .value = (uint8_t *)&g_char2_val,
+    // .val_len = sizeof(g_char2_val)
 };
 
 ble_custom_characteristic_t *characteristics[] = {&char1, &char2};
@@ -154,6 +155,27 @@ ble_custom_service_t m_estc_service = {
 
 //     g_char1_val++;
 // }
+
+void custom_ble_notify_color_changed()
+{
+    ret_code_t ret;
+
+    ble_gatts_value_t p_val = {
+        .len = char2.val_len,
+        .p_value = char2.value
+    };
+
+    sd_ble_gatts_value_set(m_conn_handle, char2.char_handles.value_handle, &p_val);
+
+    uint16_t type = BLE_GATT_HVX_INVALID;
+
+    ret = custom_ble_get_cccd(m_conn_handle, &char2, &type);
+
+    if(NRF_SUCCESS == ret && BLE_GATT_HVX_INVALID != type){
+        custom_ble_send_characteristic_value(m_conn_handle, &char2, type);
+    }
+}
+
 
 // static void char2_timer_timeout_handler(void *context)
 // {
@@ -553,9 +575,12 @@ static void advertising_start(void)
     APP_ERROR_CHECK(err_code);
 }
 
-void custom_ble_init(void)
+void custom_ble_init(custom_hsv_t *color)
 {
-    // timers_init();
+    char2.value = (uint8_t *)color;
+    char2.val_len = sizeof(*color);
+
+
     ble_stack_init();
     gap_params_init();
     gatt_init();
