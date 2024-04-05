@@ -1,8 +1,5 @@
 #include "custom_record.h"
-#include "fds.h"
 #include <string.h>
-
-#include "custom_log.h"
 
 #define SIZE_IN_WORDS(size_in_bytes) (size_in_bytes / sizeof(uint32_t) + ((size_in_bytes % sizeof(uint32_t)) ? 1 : 0))
 
@@ -70,6 +67,12 @@ ret_code_t custom_record_save(uint16_t key, void const *src_ptr, size_t size_byt
     if(NRF_SUCCESS == ret) {
         wait_for_complete();
     }
+    else if (FDS_ERR_NO_SPACE_IN_FLASH == ret) {
+        fds_gc();
+        wait_for_complete();
+        ret = fds_record_write(&g_record_desc, &g_record);
+        wait_for_complete();
+    }
 
     return ret;
 }
@@ -125,6 +128,12 @@ ret_code_t custom_record_update(uint16_t key, void const *src_ptr, size_t size_b
         ret = fds_record_update(&g_record_desc, &g_record);
 
         if(NRF_SUCCESS == ret) {
+            wait_for_complete();
+        }
+        else if (FDS_ERR_NO_SPACE_IN_FLASH == ret) {
+            fds_gc();
+            wait_for_complete();
+            ret = fds_record_write(&g_record_desc, &g_record);
             wait_for_complete();
         }
     }
