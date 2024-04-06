@@ -15,7 +15,7 @@ ret_code_t custom_cmd_apply_color_handler(char *cmd, void *context);
 ret_code_t custom_cmd_list_colors_handler(char *cmd, void *context);
 
 
-static const custom_cmd_t custom_cli_commands[] = {
+static const custom_cmd_t custom_commands[] = {
     {"RGB",               custom_cmd_rgb_handler,               "RGB <red> <green> <blue> - sets RGB color. Max value is 255\r\n"},
     {"HSV",               custom_cmd_hsv_handler,               "HSV <hue> <saturation> <value> - sets HSV color. Hue in degrees others in percents\r\n"},
     {"help",              custom_cmd_help_handler,              "help - shows this information\r\n"},

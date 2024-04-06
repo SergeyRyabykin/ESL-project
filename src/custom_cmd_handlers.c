@@ -96,7 +96,12 @@ ret_code_t custom_cmd_hsv_handler(char *str,  void *context)
     app_ctx->pwm_values->channel_2 = CUSTOM_RGB_STEP * g;
     app_ctx->pwm_values->channel_3 = CUSTOM_RGB_STEP * b;
 
-    return NRF_SUCCESS;
+    if(app_ctx->custom_app_callback){
+        app_ctx->custom_app_callback(NULL);
+    }
+    ret_code_t ret = custom_record_update(app_ctx->default_record, &app_ctx->custom_hsv_ctx->color, sizeof(app_ctx->custom_hsv_ctx->color));
+
+    return ret;
 }
 
 ret_code_t custom_cmd_rgb_handler(char *str, void *context)
@@ -135,7 +140,12 @@ ret_code_t custom_cmd_rgb_handler(char *str, void *context)
 
     custom_rgb_to_hsv( &app_ctx->custom_hsv_ctx->color, cmd_args[0], cmd_args[1], cmd_args[2]);
 
-    return NRF_SUCCESS;
+    if(app_ctx->custom_app_callback){
+        app_ctx->custom_app_callback(NULL);
+    }
+    ret_code_t ret = custom_record_update(app_ctx->default_record, &app_ctx->custom_hsv_ctx->color, sizeof(app_ctx->custom_hsv_ctx->color));
+
+    return ret;
 }
 
 ret_code_t custom_cmd_help_handler(char *str, void *context)

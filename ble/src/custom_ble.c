@@ -66,10 +66,12 @@ static ble_uuid_t m_adv_uuids[] =                                               
     {CUSTOM_SERVICE_1_UUID, BLE_UUID_TYPE_BLE},
 };
 
+static custom_cb_ble_write_data_t func_cb = NULL;
+static uint8_t g_char1_val[100];
+static uint8_t g_char2_val[100];
+
 static volatile bool g_is_indicating = false; ///< Flag to watch if the clint's acknowledge was received
 
-static uint32_t g_char1_val = 0x0;
-// static uint32_t g_char2_val = 0x0;
 
 static void process_indication_queue(void);
 custom_vptr_queue_t indication_queue = CUSTOM_VPTR_QUEUE_INIT_VALUES(&g_is_indicating, process_indication_queue);
@@ -97,17 +99,17 @@ const char char2_description[] = "User defined characteristic №2";
 ble_custom_characteristic_t char1 = {
     .char_uuid.uuid = CUSTOM_GATT_CHAR_1_UUID,
     .char_md = { 
-        .char_props.read = 1,
+        // .char_props.read = 1,
         .char_props.write = 1,
-        .char_props.notify = 1,
+        // .char_props.notify = 1,
         .p_char_user_desc = (const uint8_t *) char1_description,
         .char_user_desc_max_size = sizeof(char1_description),
         .char_user_desc_size =  sizeof(char1_description)
     },
     .attr_md = {
         .vloc = BLE_GATTS_VLOC_STACK,
-        .read_perm.sm = 1,
-        .read_perm.lv = 1,
+        // .read_perm.sm = 1,
+        // .read_perm.lv = 1,
         .write_perm.sm = 1,
         .write_perm.lv = 1,
     },
@@ -142,23 +144,14 @@ ble_custom_service_t m_estc_service = {
     .char_num = ARRAY_SIZE(characteristics)
 };
 
-// static void char1_timer_timeout_handler(void *context)
-// {
-//     ret_code_t ret;
-//     uint16_t type = BLE_GATT_HVX_INVALID;
 
-//     ret = custom_ble_get_cccd(m_conn_handle, &char1, &type);
 
-//     if(NRF_SUCCESS == ret && BLE_GATT_HVX_INVALID != type){
-//         custom_ble_send_characteristic_value(m_conn_handle, &char1, type);
-//     }
-
-//     g_char1_val++;
-// }
-
-void custom_ble_notify_color_changed()
+void custom_ble_notify_color_changed(void const *data, uint16_t len)
 {
     ret_code_t ret;
+
+    memcpy(g_char2_val, data, len);
+    char2.val_len = len;
 
     ble_gatts_value_t p_val = {
         .len = char2.val_len,
@@ -177,20 +170,7 @@ void custom_ble_notify_color_changed()
 }
 
 
-// static void char2_timer_timeout_handler(void *context)
-// {
-//     ret_code_t ret;
 
-//     uint16_t type = BLE_GATT_HVX_INVALID;
-
-//     ret = custom_ble_get_cccd(m_conn_handle, &char2, &type);
-
-//     if(NRF_SUCCESS == ret && BLE_GATT_HVX_INDICATION == type){
-//         custom_vptr_queue_add(&indication_queue, &char2);
-//     }
-
-//     g_char2_val++;
-// }
 
 /**@brief Callback function for asserts in the SoftDevice.
  *
@@ -212,18 +192,6 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
     };
     app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
-
-/**@brief Function for the Timer initialization.
- *
- * @details Initializes the timer module. This creates and starts application timers.
- */
-// static void timers_init(void)
-// {
-//     // Initialize timer module.
-//     ret_code_t err_code = app_timer_init();
-//     APP_ERROR_CHECK(err_code);
-// }
-
 
 /**@brief Function for the GAP initialization.
  *
@@ -401,6 +369,24 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
     }
 }
 
+static ret_code_t custom_ble_erase_gatts_value(uint16_t conn_handle, uint16_t val_handle)
+{
+    ble_gatts_value_t val = {
+        .len = 0,
+        .p_value = NULL
+    };
+
+    ret_code_t err_code = sd_ble_gatts_value_get(m_conn_handle, char1.char_handles.value_handle, &val);
+    if(NRF_SUCCESS == err_code) {
+        uint8_t array[val.len];
+        memset(array, 0, val.len);
+        val.p_value = array;
+        NRF_LOG_INFO("Erasing length: %d", val.len);
+        err_code = sd_ble_gatts_value_set(m_conn_handle, char1.char_handles.value_handle, &val);
+    }
+
+    return err_code;
+}
 
 /**@brief Function for handling BLE events.
  *
@@ -477,6 +463,27 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
         case BLE_GATTS_EVT_WRITE:
             NRF_LOG_INFO("BLE_GATTS_EVT_WRITE");
+
+            ble_gatts_value_t r_val = {
+                .len = 0,
+                .p_value = NULL
+            };
+
+            err_code = sd_ble_gatts_value_get(m_conn_handle, char1.char_handles.value_handle, &r_val);
+            if(NRF_SUCCESS == err_code) {
+                r_val.p_value = g_char1_val;
+                err_code = sd_ble_gatts_value_get(m_conn_handle, char1.char_handles.value_handle, &r_val);
+            }
+
+            if(NRF_SUCCESS == err_code) {
+                func_cb(g_char1_val);
+            }
+
+            err_code = custom_ble_erase_gatts_value(m_conn_handle, char1.char_handles.value_handle);
+
+            if(NRF_SUCCESS != err_code) {
+                NRF_LOG_INFO("VAL ERASING ERROR");
+            }
             break;
 
         default:
@@ -486,34 +493,12 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     }
 }
 
-// /**
-//  * @brief SoftDevice SoC event handler.
-//  *
-//  * @param[in] evt_id    SoC event.
-//  * @param[in] p_context Context.
-//  */
-// static void soc_evt_handler(uint32_t evt_id, void * p_context)
-// {
-//     bool *is_busy = (bool *)p_context;
-//     switch (evt_id)
-//     {
-//         case NRF_EVT_FLASH_OPERATION_SUCCESS:
-//             NRF_LOG_INFO("NVM was written");
-//             *is_busy = false;
-//             break;
-//         case NRF_EVT_FLASH_OPERATION_ERROR:
-//             NRF_LOG_INFO("NVM error");
-//             *is_busy = false;
-//             break;
-//         default:
-//             break;
-//     }
-// }
-
 /**@brief Function for initializing the BLE stack.
  *
  * @details Initializes the SoftDevice and the BLE event interrupt.
  */
+
+
 static void ble_stack_init(void)
 {
     ret_code_t err_code;
@@ -533,7 +518,6 @@ static void ble_stack_init(void)
 
     // Register a handler for BLE events.
     NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
-    // NRF_SDH_SOC_OBSERVER(m_soc_observer, APP_SOC_OBSERVER_PRIO, soc_evt_handler, g_context_ptr);
 }
 
 /**@brief Function for initializing the Advertising functionality.
@@ -575,11 +559,12 @@ static void advertising_start(void)
     APP_ERROR_CHECK(err_code);
 }
 
-void custom_ble_init(custom_hsv_t *color)
+void custom_ble_init(custom_hsv_t *color, custom_cb_ble_write_data_t custom_ble_write_data_cb)
 {
-    char2.value = (uint8_t *)color;
-    char2.val_len = sizeof(*color);
+    char2.value = (uint8_t *)g_char2_val;
+    char2.val_len = sizeof(g_char2_val);
 
+    func_cb = custom_ble_write_data_cb;
 
     ble_stack_init();
     gap_params_init();

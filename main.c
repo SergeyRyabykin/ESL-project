@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <assert.h>
 
 #include "sdk_config.h"
 #include "nrfx_pwm.h"
@@ -9,11 +10,15 @@
 #include "custom_log.h"
 #include "custom_record.h"
 #include "custom_app_defines.h"
+#include "custom_app_types.h"
+#include "custom_cmd_list.h"
+#include "custom_cmd.h"
 
 #include "custom_ble.h"
 
 
 #define PWM_PLAYBACK_COUNT 1
+static void notify_color_changed(void * context);
 
 static custom_record_t default_record = {
     .record.file_id = FILE_ID,
@@ -31,25 +36,36 @@ static custom_hsv_ctx_t g_custom_hsv_ctx = {
     }
 };
 
-#ifdef ESTC_USB_CLI_ENABLED
-#include "custom_cli.h"
-#include "custom_app_types.h"
-#include "custom_cli_cmd_list.h"
-#include "custom_cmd.h"
 
-static const custom_cmd_ctx_t custom_cmd_ctx = CUSTOM_CMD_INIT_LIST(custom_cli_commands);
-static custom_cmd_executor_ctx_t executor_ctx = {
+
+
+static const custom_cmd_ctx_t g_custom_cmd_ctx = CUSTOM_CMD_INIT_LIST(custom_commands);
+static custom_cmd_executor_ctx_t g_executor_ctx = {
     .cmd = NULL
 };
 
-static custom_app_ctx_t g_custom_app_ctx = {
+#ifdef ESTC_USB_CLI_ENABLED
+#include "custom_cli.h"
+static custom_app_ctx_t g_custom_app_cli_ctx = {
+    .custom_app_callback = NULL,
+    .default_record = &default_record,
     .custom_hsv_ctx = &g_custom_hsv_ctx,
     .pwm_values = &g_pwm_values,
-    .custom_cmd_ctx = &custom_cmd_ctx,
-    .custom_print_output = custom_cli_print,
-    .executor_ctx = &executor_ctx,
+    .custom_cmd_ctx = &g_custom_cmd_ctx,
+    .custom_print_output = custom_cli_print, // TODO: Think out shared using this pointer for cli and ble
+    .executor_ctx = &g_executor_ctx,
 };
 #endif
+
+static custom_app_ctx_t g_custom_app_ble_ctx = {
+    .custom_app_callback = notify_color_changed,
+    .default_record = &default_record,
+    .custom_hsv_ctx = &g_custom_hsv_ctx,
+    .pwm_values = &g_pwm_values,
+    .custom_cmd_ctx = &g_custom_cmd_ctx,
+    .custom_print_output = custom_cli_print, // TODO: Think out shared using this pointer for cli and ble
+    .executor_ctx = &g_executor_ctx,
+};
 
 nrfx_gpiote_in_config_t g_gpiote_cfg = {
     .sense = NRF_GPIOTE_POLARITY_TOGGLE,
@@ -70,6 +86,20 @@ static nrf_pwm_sequence_t g_pwm_sequence = {
     .length = NRF_PWM_VALUES_LENGTH(g_pwm_values),
     .repeats = 100,
 };
+
+
+
+
+
+static void notify_color_changed(void * context)
+{
+    char message[20] = "\0";
+
+    NRF_STATIC_ASSERT(sizeof(message) >= sizeof("H:360 S:100 V:100"), "The array for notification too short");
+
+    sprintf(message, "H:%d S:%d V:%d", g_custom_hsv_ctx.color.hue, g_custom_hsv_ctx.color.saturation, g_custom_hsv_ctx.color.value);
+    custom_ble_notify_color_changed(message, sizeof(message));
+}
 
 // Function to process call if APP_ERROR_CHECK macros failed
 void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info)
@@ -103,47 +133,57 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
         g_pwm_values.channel_2 = CUSTOM_RGB_STEP * g;
         g_pwm_values.channel_3 = CUSTOM_RGB_STEP * b;
     }
+
+    if(SINGLE_CLICK_RELEASED == custom_button_get_state(CUSTOM_BUTTON) && !custom_button_is_processed(CUSTOM_BUTTON)) {
+        notify_color_changed(NULL);
+        custom_button_process(CUSTOM_BUTTON);
+    }
     
     custom_app_process_pwm_indicator(&g_app_pwm_ind_ctx);
 }
 
 
-/**@brief Function for initializing power management.
- */
-// static void power_management_init(void)
-// {
-//     ret_code_t err_code;
-//     err_code = nrf_pwr_mgmt_init();
-//     APP_ERROR_CHECK(err_code);
-// }
+void custom_ble_change_color(void *cmd_str)
+{
+    if(strlen(cmd_str)) {
+        NRF_LOG_INFO("%s", cmd_str);
+        ret_code_t ret = custom_cmd_get_cmd_executor(g_custom_app_ble_ctx.executor_ctx, cmd_str, &g_custom_cmd_ctx, &g_custom_app_ble_ctx);
+        if(NRF_SUCCESS != ret) {
+            // TODO: Notify unknown command
+            // char warning[] = "Unknown command";
+            // custom_ble_notify_color_changed(warning, strlen(warning));
+            NRF_LOG_INFO("UNKNOWN COMMAND");
+        }
+    }
+}
 
 
-/**@brief Function for handling the idle state (main loop).
- *
- * @details If there is no pending log operation, then sleep until next the next event occurs.
- */
-// static void idle_state_handle(void)
-// {
-//     if (NRF_LOG_PROCESS() == false)
-//     {
-//         nrf_pwr_mgmt_run();
-//     }
-// 	LOG_BACKEND_USB_PROCESS();
-// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 int main(void)
 {
     uint32_t ret = 0;
 
-    // Log initialization
-    ret = NRF_LOG_INIT(NULL);
-    APP_ERROR_CHECK(ret);
-    NRF_LOG_DEFAULT_BACKENDS_INIT();
 
     custom_button_pin_config(CUSTOM_BUTTON);
 
-    custom_ble_init(&g_custom_hsv_ctx.color);
 
     ret = custom_record_storage_init();
     APP_ERROR_CHECK(ret);
@@ -156,8 +196,15 @@ int main(void)
         }
     }
 
+    // Log initialization
+    ret = NRF_LOG_INIT(NULL);
+    APP_ERROR_CHECK(ret);
+    NRF_LOG_DEFAULT_BACKENDS_INIT();
+
+    custom_ble_init(&g_custom_hsv_ctx.color, custom_ble_change_color);
+
 #ifdef ESTC_USB_CLI_ENABLED
-    ret = custom_cli_init(&g_custom_app_ctx);
+    ret = custom_cli_init(&g_custom_app_cli_ctx);
     APP_ERROR_CHECK(ret);
 #endif
 
@@ -185,26 +232,30 @@ int main(void)
     APP_ERROR_CHECK(ret);
     nrfx_pwm_simple_playback(&g_pwm_inst, &g_pwm_sequence, PWM_PLAYBACK_COUNT, NRFX_PWM_FLAG_LOOP);
 
+    notify_color_changed(NULL);
     // power_management_init();
     
 
     while(true) {
 
-#ifdef ESTC_USB_CLI_ENABLED
-        if(executor_ctx.cmd) {
-            ret = executor_ctx.cmd->cmd_execute(executor_ctx.cmd_str, executor_ctx.context);
+// #ifdef ESTC_USB_CLI_ENABLED
+        if(g_executor_ctx.cmd) {
+            ret = g_executor_ctx.cmd->cmd_execute(g_executor_ctx.cmd_str, g_executor_ctx.context);
             if(NRF_SUCCESS != ret) {
-                custom_cli_print("Arguments error!\n\r");
+                // TODO: Notify arguments error
+                // custom_cli_print("Arguments error!\n\r");
+                NRF_LOG_INFO("ARGUMENTS_ERROR");
             }
-            executor_ctx.cmd = NULL;
+            g_executor_ctx.cmd = NULL;
         }
-#endif        
+// #endif        
 
         if(g_must_be_updated) {
             ret_code_t ret = custom_record_update(&default_record, &g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
             APP_ERROR_CHECK(ret);
             g_must_be_updated = false;
-            custom_ble_notify_color_changed();
+
+
         }
 
         LOG_BACKEND_USB_PROCESS();

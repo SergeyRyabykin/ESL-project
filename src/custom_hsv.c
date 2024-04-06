@@ -1,8 +1,10 @@
 #include <math.h>
+#include "custom_log.h"
 #include "custom_hsv.h"
 
-#define MAX(a, b) ((a > b) ? a : b)
-#define MIN(a, b) ((a < b) ? a : b)
+
+// #define MAX(a, b) ((a > b) ? a : b)
+// #define MIN(a, b) ((a < b) ? a : b)
 
 void custom_rgb_to_hsv(custom_hsv_t *hsv, const uint8_t red, const uint8_t green, const uint8_t blue)
 {
@@ -90,10 +92,12 @@ void custom_hsv_hue_change_by_one(custom_hsv_t *color)
     if(360 <= ++color->hue) {
         color->hue = 0;
     }
+    NRF_LOG_INFO("H:%d S:%d V:%d", color->hue, color->saturation, color->value);
 }
 
 void custom_hsv_saturation_change_by_one(custom_hsv_ctx_t *context)
 {
+    // TODO: There is a bug when value == 0;
     if(context->satur_is_forward) {
         if(MAX_SATURATION <= ++context->color.saturation) {
             context->satur_is_forward = false;
@@ -104,10 +108,12 @@ void custom_hsv_saturation_change_by_one(custom_hsv_ctx_t *context)
             context->satur_is_forward = true;
         }
     }
+    NRF_LOG_INFO("H:%d S:%d V:%d", context->color.hue, context->color.saturation, context->color.value);
 }
 
 void custom_hsv_value_change_by_one(custom_hsv_ctx_t *context)
 {    
+    // TODO: There is a bug when value == 0;
     if(context->value_is_forward) {
         if(MAX_SATURATION <= ++context->color.value) {
             context->value_is_forward = false;
@@ -118,4 +124,5 @@ void custom_hsv_value_change_by_one(custom_hsv_ctx_t *context)
             context->value_is_forward = true;
         }
     }          
+    NRF_LOG_INFO("H:%d S:%d V:%d", context->color.hue, context->color.saturation, context->color.value);
 }
