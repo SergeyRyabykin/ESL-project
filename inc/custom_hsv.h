@@ -11,8 +11,8 @@ typedef uint16_t hue_t;
 
 typedef struct {
     hue_t hue;          // degree
-    uint8_t saturation;  // percent
-    uint8_t value;       // percent
+    int8_t saturation;  // percent
+    int8_t value;       // percent
 } custom_hsv_t;
 
 typedef struct {
