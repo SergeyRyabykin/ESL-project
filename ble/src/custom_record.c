@@ -1,6 +1,8 @@
 #include "custom_record.h"
 #include <string.h>
 
+#include "custom_log.h"
+
 #define SIZE_IN_WORDS(size_in_bytes) (size_in_bytes / sizeof(uint32_t) + ((size_in_bytes % sizeof(uint32_t)) ? 1 : 0))
 
 static volatile bool is_complete = false;
@@ -126,6 +128,8 @@ ret_code_t custom_record_update(custom_record_t * const record, void const *src_
             wait_for_complete();
         }
     }
+
+    NRF_LOG_INFO("Default color updating: %x", ret);
 
     return ret;
 }

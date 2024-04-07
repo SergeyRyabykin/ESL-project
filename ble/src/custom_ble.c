@@ -169,7 +169,38 @@ void custom_ble_notify_color_changed(void const *data, uint16_t len)
     }
 }
 
+ret_code_t custom_ble_notify_message(char const *data)
+{
+    ret_code_t ret = NRF_SUCCESS;
 
+    NRF_LOG_INFO("MUST BE NOTIFIED OF ERROR");
+    // TODO: Requires to be analyzed and corrected
+    // uint16_t len = strlen(data);
+    // uint8_t message[len];
+    // memcpy(message, data, len);
+
+    // ble_gatts_value_t p_val = {
+    //     .len = len,
+    //     .p_value = message
+    // };
+
+    // sd_ble_gatts_value_set(m_conn_handle, char2.char_handles.value_handle, &p_val);
+
+    // uint16_t type = BLE_GATT_HVX_INVALID;
+
+    // ret = custom_ble_get_cccd(m_conn_handle, &char2, &type);
+
+    // if(NRF_SUCCESS == ret && BLE_GATT_HVX_INVALID != type) {
+    //     custom_ble_send_characteristic_value(m_conn_handle, &char2, type);
+    // };
+
+    // p_val.len = char2.val_len;
+    // p_val.p_value = char2.value;
+
+    // sd_ble_gatts_value_set(m_conn_handle, char2.char_handles.value_handle, &p_val);
+
+    return ret;
+}
 
 
 /**@brief Callback function for asserts in the SoftDevice.
@@ -326,18 +357,18 @@ static void conn_params_init(void)
  */
 static void sleep_mode_enter(void)
 {
-    ret_code_t err_code;
+    // ret_code_t err_code;
 
-    err_code = bsp_indication_set(BSP_INDICATE_IDLE);
-    APP_ERROR_CHECK(err_code);
+    // err_code = bsp_indication_set(BSP_INDICATE_IDLE);
+    // APP_ERROR_CHECK(err_code);
 
-    // Prepare wakeup buttons.
-    err_code = bsp_btn_ble_sleep_mode_prepare();
-    APP_ERROR_CHECK(err_code);
+    // // Prepare wakeup buttons.
+    // err_code = bsp_btn_ble_sleep_mode_prepare();
+    // APP_ERROR_CHECK(err_code);
 
-    // Go to system-off mode (this function will not return; wakeup will cause a reset).
-    err_code = sd_power_system_off();
-    APP_ERROR_CHECK(err_code);
+    // // Go to system-off mode (this function will not return; wakeup will cause a reset).
+    // err_code = sd_power_system_off();
+    // APP_ERROR_CHECK(err_code);
 }
 
 
@@ -559,6 +590,57 @@ static void advertising_start(void)
     APP_ERROR_CHECK(err_code);
 }
 
+
+// static void pm_evt_handler(pm_evt_t const * p_evt)
+// {
+//     pm_handler_on_pm_evt(p_evt);
+//     pm_handler_disconnect_on_sec_failure(p_evt);
+//     pm_handler_flash_clean(p_evt);
+
+//     switch (p_evt->evt_id) {
+//         case PM_EVT_BONDED_PEER_CONNECTED:
+//             NRF_LOG_INFO("PM_EVT_BONDED_PEER_CONNECTED");
+//             break;
+//         default:
+//             break;
+//     }
+// }
+
+// static void peer_manager_init(bool erase_bonds)
+// {
+//     ret_code_t ret;
+//     ble_gap_sec_params_t sec_param;
+
+//     ret = pm_init();
+//     APP_ERROR_CHECK(ret);
+
+//     if(erase_bonds) {
+//         pm_peers_delete();
+//     }
+
+//     memset(&sec_param, 0, sizeof(sec_param));
+
+//     sec_param.bond = true;
+//     sec_param.mitm = false;
+//     sec_param.lesc = 0;
+//     sec_param.keypress = 0;
+//     sec_param.io_caps = BLE_GAP_IO_CAPS_NONE;
+//     sec_param.oob = false;
+//     sec_param.min_key_size = 7;
+//     sec_param.max_key_size = 16;
+//     sec_param.kdist_own.enc = 1;
+//     sec_param.kdist_own.id = 1;
+//     sec_param.kdist_peer.enc = 1;
+//     sec_param.kdist_peer.id = 1;
+
+//     ret = pm_sec_params_set(&sec_param);
+//     APP_ERROR_CHECK(ret);
+
+//     ret = pm_register(&pm_evt_handler);
+//     APP_ERROR_CHECK(ret);
+// }
+
+
 void custom_ble_init(custom_hsv_t *color, custom_cb_ble_write_data_t custom_ble_write_data_cb)
 {
     char2.value = (uint8_t *)g_char2_val;
@@ -572,6 +654,7 @@ void custom_ble_init(custom_hsv_t *color, custom_cb_ble_write_data_t custom_ble_
     services_init();
     advertising_init();
     conn_params_init();
+    // peer_manager_init(true);
     advertising_start();
 }
 

@@ -25,7 +25,7 @@ static custom_record_t default_record = {
     .record.key = DEFAULT_HSV_COLOR_ID
 };
 
-volatile bool g_must_be_updated = false;
+static volatile bool g_default_must_be_updated = false;
 
 static nrf_pwm_values_individual_t g_pwm_values;
 static custom_hsv_ctx_t g_custom_hsv_ctx = {
@@ -36,22 +36,26 @@ static custom_hsv_ctx_t g_custom_hsv_ctx = {
     }
 };
 
+// TODO: Think about pointers to custom_cmd_t
+static const custom_cmd_t custom_ble_cmd_set[] = {
+    custom_commands[0],
+    custom_commands[1]
+};
 
-
-
-static const custom_cmd_ctx_t g_custom_cmd_ctx = CUSTOM_CMD_INIT_LIST(custom_commands);
+static const custom_cmd_ctx_t g_custom_ble_cmd_ctx = CUSTOM_CMD_INIT_LIST(custom_ble_cmd_set);
 static custom_cmd_executor_ctx_t g_executor_ctx = {
     .cmd = NULL
 };
 
 #ifdef ESTC_USB_CLI_ENABLED
 #include "custom_cli.h"
+static const custom_cmd_ctx_t g_custom_cli_cmd_ctx = CUSTOM_CMD_INIT_LIST(custom_commands);
 static custom_app_ctx_t g_custom_app_cli_ctx = {
-    .custom_app_callback = NULL,
+    .custom_app_callback = notify_color_changed,
     .default_record = &default_record,
     .custom_hsv_ctx = &g_custom_hsv_ctx,
     .pwm_values = &g_pwm_values,
-    .custom_cmd_ctx = &g_custom_cmd_ctx,
+    .custom_cmd_ctx = &g_custom_cli_cmd_ctx,
     .custom_print_output = custom_cli_print, // TODO: Think out shared using this pointer for cli and ble
     .executor_ctx = &g_executor_ctx,
 };
@@ -62,8 +66,8 @@ static custom_app_ctx_t g_custom_app_ble_ctx = {
     .default_record = &default_record,
     .custom_hsv_ctx = &g_custom_hsv_ctx,
     .pwm_values = &g_pwm_values,
-    .custom_cmd_ctx = &g_custom_cmd_ctx,
-    .custom_print_output = custom_cli_print, // TODO: Think out shared using this pointer for cli and ble
+    .custom_cmd_ctx = &g_custom_ble_cmd_ctx,
+    .custom_print_output = custom_ble_notify_message, // TODO: Think out shared using this pointer for cli and ble
     .executor_ctx = &g_executor_ctx,
 };
 
@@ -87,10 +91,6 @@ static nrf_pwm_sequence_t g_pwm_sequence = {
     .repeats = 100,
 };
 
-
-
-
-
 static void notify_color_changed(void * context)
 {
     char message[20] = "\0";
@@ -113,7 +113,7 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
         custom_app_set_pwm_indicator(custom_app_change_state(), &g_app_pwm_ind_ctx);
 
         if(DEFAULT_MODE == custom_app_get_state()) {
-            g_must_be_updated = true;
+            g_default_must_be_updated = true;
         }
 
         custom_button_process(CUSTOM_BUTTON);
@@ -142,12 +142,11 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
     custom_app_process_pwm_indicator(&g_app_pwm_ind_ctx);
 }
 
-
 void custom_ble_change_color(void *cmd_str)
 {
     if(strlen(cmd_str)) {
         NRF_LOG_INFO("%s", cmd_str);
-        ret_code_t ret = custom_cmd_get_cmd_executor(g_custom_app_ble_ctx.executor_ctx, cmd_str, &g_custom_cmd_ctx, &g_custom_app_ble_ctx);
+        ret_code_t ret = custom_cmd_get_cmd_executor(g_custom_app_ble_ctx.executor_ctx, cmd_str, &g_custom_ble_cmd_ctx, &g_custom_app_ble_ctx);
         if(NRF_SUCCESS != ret) {
             // TODO: Notify unknown command
             // char warning[] = "Unknown command";
@@ -157,30 +156,14 @@ void custom_ble_change_color(void *cmd_str)
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 int main(void)
 {
     uint32_t ret = 0;
 
+    // Log initialization
+    ret = NRF_LOG_INIT(NULL);
+    APP_ERROR_CHECK(ret);
+    NRF_LOG_DEFAULT_BACKENDS_INIT();
 
     custom_button_pin_config(CUSTOM_BUTTON);
 
@@ -195,11 +178,6 @@ int main(void)
             ;
         }
     }
-
-    // Log initialization
-    ret = NRF_LOG_INIT(NULL);
-    APP_ERROR_CHECK(ret);
-    NRF_LOG_DEFAULT_BACKENDS_INIT();
 
     custom_ble_init(&g_custom_hsv_ctx.color, custom_ble_change_color);
 
@@ -233,34 +211,27 @@ int main(void)
     nrfx_pwm_simple_playback(&g_pwm_inst, &g_pwm_sequence, PWM_PLAYBACK_COUNT, NRFX_PWM_FLAG_LOOP);
 
     notify_color_changed(NULL);
-    // power_management_init();
-    
 
     while(true) {
 
-// #ifdef ESTC_USB_CLI_ENABLED
         if(g_executor_ctx.cmd) {
             ret = g_executor_ctx.cmd->cmd_execute(g_executor_ctx.cmd_str, g_executor_ctx.context);
             if(NRF_SUCCESS != ret) {
-                // TODO: Notify arguments error
-                // custom_cli_print("Arguments error!\n\r");
+                custom_app_ctx_t *ctx_ptr = (custom_app_ctx_t*)(g_executor_ctx.context);
+                ctx_ptr->custom_print_output("Arguments error!\n\r");
                 NRF_LOG_INFO("ARGUMENTS_ERROR");
             }
             g_executor_ctx.cmd = NULL;
         }
-// #endif        
 
-        if(g_must_be_updated) {
+        if(g_default_must_be_updated) {
             ret_code_t ret = custom_record_update(&default_record, &g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
             APP_ERROR_CHECK(ret);
-            g_must_be_updated = false;
-
-
+            g_default_must_be_updated = false;
         }
 
         LOG_BACKEND_USB_PROCESS();
         NRF_LOG_PROCESS();
-        // idle_state_handle();
     }   
 }
 
