@@ -36,10 +36,10 @@ static custom_hsv_ctx_t g_custom_hsv_ctx = {
     }
 };
 
-// TODO: Think about pointers to custom_cmd_t
 static const custom_cmd_t custom_ble_cmd_set[] = {
     custom_commands[0],
-    custom_commands[1]
+    custom_commands[1],
+    custom_commands[2],
 };
 
 static const custom_cmd_ctx_t g_custom_ble_cmd_ctx = CUSTOM_CMD_INIT_LIST(custom_ble_cmd_set);
@@ -56,7 +56,7 @@ static custom_app_ctx_t g_custom_app_cli_ctx = {
     .custom_hsv_ctx = &g_custom_hsv_ctx,
     .pwm_values = &g_pwm_values,
     .custom_cmd_ctx = &g_custom_cli_cmd_ctx,
-    .custom_print_output = custom_cli_print, // TODO: Think out shared using this pointer for cli and ble
+    .custom_print_output = custom_cli_print,
     .executor_ctx = &g_executor_ctx,
 };
 #endif
@@ -67,7 +67,7 @@ static custom_app_ctx_t g_custom_app_ble_ctx = {
     .custom_hsv_ctx = &g_custom_hsv_ctx,
     .pwm_values = &g_pwm_values,
     .custom_cmd_ctx = &g_custom_ble_cmd_ctx,
-    .custom_print_output = custom_ble_notify_message, // TODO: Think out shared using this pointer for cli and ble
+    .custom_print_output = custom_ble_notify_message,
     .executor_ctx = &g_executor_ctx,
 };
 
@@ -136,6 +136,7 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
 
     if(SINGLE_CLICK_RELEASED == custom_button_get_state(CUSTOM_BUTTON) && !custom_button_is_processed(CUSTOM_BUTTON)) {
         notify_color_changed(NULL);
+        // custom_ble_advertising_start();
         custom_button_process(CUSTOM_BUTTON);
     }
     
@@ -148,9 +149,7 @@ void custom_ble_change_color(void *cmd_str)
         NRF_LOG_INFO("%s", cmd_str);
         ret_code_t ret = custom_cmd_get_cmd_executor(g_custom_app_ble_ctx.executor_ctx, cmd_str, &g_custom_ble_cmd_ctx, &g_custom_app_ble_ctx);
         if(NRF_SUCCESS != ret) {
-            // TODO: Notify unknown command
-            // char warning[] = "Unknown command";
-            // custom_ble_notify_color_changed(warning, strlen(warning));
+            g_custom_app_ble_ctx.custom_print_output("Unknown command");
             NRF_LOG_INFO("UNKNOWN COMMAND");
         }
     }
@@ -167,6 +166,7 @@ int main(void)
 
     custom_button_pin_config(CUSTOM_BUTTON);
 
+    custom_ble_init(&g_custom_hsv_ctx.color, custom_ble_change_color);
 
     ret = custom_record_storage_init();
     APP_ERROR_CHECK(ret);
@@ -179,7 +179,6 @@ int main(void)
         }
     }
 
-    custom_ble_init(&g_custom_hsv_ctx.color, custom_ble_change_color);
 
 #ifdef ESTC_USB_CLI_ENABLED
     ret = custom_cli_init(&g_custom_app_cli_ctx);

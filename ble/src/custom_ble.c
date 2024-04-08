@@ -93,8 +93,8 @@ static void process_indication_queue(void)
     }
 }
 
-const char char1_description[] = "User defined characteristic №1";
-const char char2_description[] = "User defined characteristic №2";
+const char char1_description[] = "Available commands:\n\rRGB <r> <g> <b>\n\rHSV <h> <s> <v>\n\rsave (to save a color to memory as default)";
+const char char2_description[] = "Reading a color and subscribing to notifications of a color changing";
 
 ble_custom_characteristic_t char1 = {
     .char_uuid.uuid = CUSTOM_GATT_CHAR_1_UUID,
@@ -111,7 +111,7 @@ ble_custom_characteristic_t char1 = {
         // .read_perm.sm = 1,
         // .read_perm.lv = 1,
         .write_perm.sm = 1,
-        .write_perm.lv = 1,
+        .write_perm.lv = 2,
     },
     .value = (uint8_t *)&g_char1_val,
     .val_len = sizeof(g_char1_val)
@@ -438,8 +438,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         case BLE_GAP_EVT_CONNECTED:
             NRF_LOG_INFO("Connected (conn_handle: %d)", p_ble_evt->evt.gap_evt.conn_handle);
 
-            err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
-            APP_ERROR_CHECK(err_code);
+            // err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
+            // APP_ERROR_CHECK(err_code);
 
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
@@ -500,6 +500,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
                 .p_value = NULL
             };
 
+            memset(g_char1_val, 0, sizeof(g_char1_val));
+
             err_code = sd_ble_gatts_value_get(m_conn_handle, char1.char_handles.value_handle, &r_val);
             if(NRF_SUCCESS == err_code) {
                 r_val.p_value = g_char1_val;
@@ -507,6 +509,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             }
 
             if(NRF_SUCCESS == err_code) {
+                NRF_LOG_INFO("WRITEN_VALUE: %s", g_char1_val);
                 func_cb(g_char1_val);
             }
 
@@ -584,61 +587,63 @@ static void advertising_init(void)
 
 /**@brief Function for starting advertising.
  */
-static void advertising_start(void)
+void custom_ble_advertising_start(void)
 {
     ret_code_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
 }
 
 
-// static void pm_evt_handler(pm_evt_t const * p_evt)
-// {
-//     pm_handler_on_pm_evt(p_evt);
-//     pm_handler_disconnect_on_sec_failure(p_evt);
-//     pm_handler_flash_clean(p_evt);
+static void pm_evt_handler(pm_evt_t const * p_evt)
+{
+    pm_handler_on_pm_evt(p_evt);
+    pm_handler_disconnect_on_sec_failure(p_evt);
+    pm_handler_flash_clean(p_evt);
 
-//     switch (p_evt->evt_id) {
-//         case PM_EVT_BONDED_PEER_CONNECTED:
-//             NRF_LOG_INFO("PM_EVT_BONDED_PEER_CONNECTED");
-//             break;
-//         default:
-//             break;
-//     }
-// }
+    NRF_LOG_INFO("PM_EVT: %x", p_evt->evt_id);
 
-// static void peer_manager_init(bool erase_bonds)
-// {
-//     ret_code_t ret;
-//     ble_gap_sec_params_t sec_param;
+    switch (p_evt->evt_id) {
+        case PM_EVT_BONDED_PEER_CONNECTED:
+            NRF_LOG_INFO("PM_EVT_BONDED_PEER_CONNECTED");
+            break;
+        default:
+            break;
+    }
+}
 
-//     ret = pm_init();
-//     APP_ERROR_CHECK(ret);
+static void peer_manager_init(bool erase_bonds)
+{
+    ret_code_t ret;
+    ble_gap_sec_params_t sec_param;
 
-//     if(erase_bonds) {
-//         pm_peers_delete();
-//     }
+    ret = pm_init();
+    APP_ERROR_CHECK(ret);
 
-//     memset(&sec_param, 0, sizeof(sec_param));
+    if(erase_bonds) {
+        pm_peers_delete();
+    }
 
-//     sec_param.bond = true;
-//     sec_param.mitm = false;
-//     sec_param.lesc = 0;
-//     sec_param.keypress = 0;
-//     sec_param.io_caps = BLE_GAP_IO_CAPS_NONE;
-//     sec_param.oob = false;
-//     sec_param.min_key_size = 7;
-//     sec_param.max_key_size = 16;
-//     sec_param.kdist_own.enc = 1;
-//     sec_param.kdist_own.id = 1;
-//     sec_param.kdist_peer.enc = 1;
-//     sec_param.kdist_peer.id = 1;
+    memset(&sec_param, 0, sizeof(sec_param));
 
-//     ret = pm_sec_params_set(&sec_param);
-//     APP_ERROR_CHECK(ret);
+    sec_param.bond = true;
+    sec_param.mitm = false;
+    sec_param.lesc = 0;
+    sec_param.keypress = 0;
+    sec_param.io_caps = BLE_GAP_IO_CAPS_NONE;
+    sec_param.oob = false;
+    sec_param.min_key_size = 7;
+    sec_param.max_key_size = 16;
+    sec_param.kdist_own.enc = 1;
+    sec_param.kdist_own.id = 1;
+    sec_param.kdist_peer.enc = 1;
+    sec_param.kdist_peer.id = 1;
 
-//     ret = pm_register(&pm_evt_handler);
-//     APP_ERROR_CHECK(ret);
-// }
+    ret = pm_sec_params_set(&sec_param);
+    APP_ERROR_CHECK(ret);
+
+    ret = pm_register(&pm_evt_handler);
+    APP_ERROR_CHECK(ret);
+}
 
 
 void custom_ble_init(custom_hsv_t *color, custom_cb_ble_write_data_t custom_ble_write_data_cb)
@@ -654,8 +659,8 @@ void custom_ble_init(custom_hsv_t *color, custom_cb_ble_write_data_t custom_ble_
     services_init();
     advertising_init();
     conn_params_init();
-    // peer_manager_init(true);
-    advertising_start();
+    peer_manager_init(true);
+    custom_ble_advertising_start();
 }
 
 

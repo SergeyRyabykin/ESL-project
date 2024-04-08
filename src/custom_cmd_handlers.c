@@ -99,9 +99,8 @@ ret_code_t custom_cmd_hsv_handler(char *str,  void *context)
     if(app_ctx->custom_app_callback){
         app_ctx->custom_app_callback(NULL);
     }
-    ret_code_t ret = custom_record_update(app_ctx->default_record, &app_ctx->custom_hsv_ctx->color, sizeof(app_ctx->custom_hsv_ctx->color));
 
-    return ret;
+    return NRF_SUCCESS;
 }
 
 ret_code_t custom_cmd_rgb_handler(char *str, void *context)
@@ -143,6 +142,20 @@ ret_code_t custom_cmd_rgb_handler(char *str, void *context)
     if(app_ctx->custom_app_callback){
         app_ctx->custom_app_callback(NULL);
     }
+
+    return NRF_SUCCESS;
+}
+
+ret_code_t custom_cmd_save_handler(char *str, void *context)
+{
+    custom_app_ctx_t *app_ctx = (custom_app_ctx_t *)context;
+
+    strtok(str, " "); // Read the command name
+    
+    if(strtok(NULL, " ")) {
+        return NRF_ERROR_INVALID_PARAM;
+    }
+
     ret_code_t ret = custom_record_update(app_ctx->default_record, &app_ctx->custom_hsv_ctx->color, sizeof(app_ctx->custom_hsv_ctx->color));
 
     return ret;
@@ -151,6 +164,12 @@ ret_code_t custom_cmd_rgb_handler(char *str, void *context)
 ret_code_t custom_cmd_help_handler(char *str, void *context)
 {
     custom_app_ctx_t *app_ctx = (custom_app_ctx_t *)context;
+
+    strtok(str, " "); // Read the command name
+
+    if(strtok(NULL, " ")) {
+        return NRF_ERROR_INVALID_PARAM;
+    }
 
     for(unsigned int i = 0; i < app_ctx->custom_cmd_ctx->number_commands; i++) {
         while(NRF_SUCCESS != app_ctx->custom_print_output((char *)app_ctx->custom_cmd_ctx->commands[i].cmd_description)) {
@@ -331,6 +350,10 @@ ret_code_t custom_cmd_apply_color_handler(char *str, void *context)
         app_ctx->pwm_values->channel_1 = CUSTOM_RGB_STEP * r;
         app_ctx->pwm_values->channel_2 = CUSTOM_RGB_STEP * g;
         app_ctx->pwm_values->channel_3 = CUSTOM_RGB_STEP * b;
+
+        if(app_ctx->custom_app_callback){
+            app_ctx->custom_app_callback(NULL);
+        }
 
         ret = NRF_SUCCESS;
     }
