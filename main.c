@@ -15,6 +15,7 @@
 #include "custom_cmd.h"
 
 #include "custom_ble.h"
+#include "nrf_delay.h"
 
 
 #define PWM_PLAYBACK_COUNT 1
@@ -136,7 +137,6 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
 
     if(SINGLE_CLICK_RELEASED == custom_button_get_state(CUSTOM_BUTTON) && !custom_button_is_processed(CUSTOM_BUTTON)) {
         notify_color_changed(NULL);
-        // custom_ble_advertising_start();
         custom_button_process(CUSTOM_BUTTON);
     }
     
@@ -149,7 +149,7 @@ void custom_ble_change_color(void *cmd_str)
         NRF_LOG_INFO("%s", cmd_str);
         ret_code_t ret = custom_cmd_get_cmd_executor(g_custom_app_ble_ctx.executor_ctx, cmd_str, &g_custom_ble_cmd_ctx, &g_custom_app_ble_ctx);
         if(NRF_SUCCESS != ret) {
-            g_custom_app_ble_ctx.custom_print_output("Unknown command");
+            g_custom_app_ble_ctx.custom_print_output("Unknown command\n\r");
             NRF_LOG_INFO("UNKNOWN COMMAND");
         }
     }
@@ -167,18 +167,21 @@ int main(void)
     custom_button_pin_config(CUSTOM_BUTTON);
 
     custom_ble_init(&g_custom_hsv_ctx.color, custom_ble_change_color);
-
     ret = custom_record_storage_init();
     APP_ERROR_CHECK(ret);
 
     // To erase user app non-volatile memory
     if(custom_button_is_pressed(CUSTOM_BUTTON)) {
+        custom_ble_delete_peers();
         ret = custom_record_erase(FILE_ID);
+        APP_ERROR_CHECK(ret);
+
         while(custom_button_is_pressed(CUSTOM_BUTTON)) {
             ;
         }
-    }
 
+        nrf_delay_ms(10);
+    }
 
 #ifdef ESTC_USB_CLI_ENABLED
     ret = custom_cli_init(&g_custom_app_cli_ctx);
@@ -215,10 +218,13 @@ int main(void)
 
         if(g_executor_ctx.cmd) {
             ret = g_executor_ctx.cmd->cmd_execute(g_executor_ctx.cmd_str, g_executor_ctx.context);
+            custom_app_ctx_t *ctx_ptr = (custom_app_ctx_t*)(g_executor_ctx.context);
             if(NRF_SUCCESS != ret) {
-                custom_app_ctx_t *ctx_ptr = (custom_app_ctx_t*)(g_executor_ctx.context);
-                ctx_ptr->custom_print_output("Arguments error!\n\r");
+                ctx_ptr->custom_print_output("Arguments error\n\r");
                 NRF_LOG_INFO("ARGUMENTS_ERROR");
+            }
+            else {
+                ctx_ptr->custom_print_output("Success\n\r");
             }
             g_executor_ctx.cmd = NULL;
         }

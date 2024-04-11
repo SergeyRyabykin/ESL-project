@@ -69,6 +69,7 @@ static ble_uuid_t m_adv_uuids[] =                                               
 static custom_cb_ble_write_data_t func_cb = NULL;
 static uint8_t g_char1_val[100];
 static uint8_t g_char2_val[100];
+static uint8_t g_char3_val[100];
 
 static volatile bool g_is_indicating = false; ///< Flag to watch if the clint's acknowledge was received
 
@@ -80,7 +81,6 @@ custom_vptr_queue_t indication_queue = CUSTOM_VPTR_QUEUE_INIT_VALUES(&g_is_indic
 static void process_indication_queue(void)
 {
     ret_code_t ret;
-    // ble_custom_characteristic_t *target = NULL;
     void *target = NULL;
 
     ret = custom_vptr_queue_get(&target, &indication_queue);
@@ -94,22 +94,19 @@ static void process_indication_queue(void)
 }
 
 const char char1_description[] = "Available commands:\n\rRGB <r> <g> <b>\n\rHSV <h> <s> <v>\n\rsave (to save a color to memory as default)";
-const char char2_description[] = "Reading a color and subscribing to notifications of a color changing";
+const char char2_description[] = "Reading a color and subscribing to notifications of a color changing in RGB format";
+const char char3_description[] = "Command report interface";
 
 ble_custom_characteristic_t char1 = {
     .char_uuid.uuid = CUSTOM_GATT_CHAR_1_UUID,
     .char_md = { 
-        // .char_props.read = 1,
         .char_props.write = 1,
-        // .char_props.notify = 1,
         .p_char_user_desc = (const uint8_t *) char1_description,
         .char_user_desc_max_size = sizeof(char1_description),
         .char_user_desc_size =  sizeof(char1_description)
     },
     .attr_md = {
         .vloc = BLE_GATTS_VLOC_STACK,
-        // .read_perm.sm = 1,
-        // .read_perm.lv = 1,
         .write_perm.sm = 1,
         .write_perm.lv = 2,
     },
@@ -131,11 +128,27 @@ ble_custom_characteristic_t char2 = {
         .read_perm.sm = 1,
         .read_perm.lv = 1,
     },
-    // .value = (uint8_t *)&g_char2_val,
-    // .val_len = sizeof(g_char2_val)
 };
 
-ble_custom_characteristic_t *characteristics[] = {&char1, &char2};
+ble_custom_characteristic_t char3 = {
+    .char_uuid.uuid = CUSTOM_GATT_CHAR_2_UUID,
+    .char_md = { 
+        .char_props.read = 1,
+        .char_props.notify = 1,
+        .p_char_user_desc = (const uint8_t *) char3_description,
+        .char_user_desc_max_size = sizeof(char3_description),
+        .char_user_desc_size =  sizeof(char3_description)
+    },
+    .attr_md = {
+        .vloc = BLE_GATTS_VLOC_USER,
+        .read_perm.sm = 1,
+        .read_perm.lv = 1,
+    },
+    .value = (uint8_t *)&g_char3_val,
+    .val_len = sizeof(g_char3_val)
+};
+
+ble_custom_characteristic_t *characteristics[] = {&char1, &char2, &char3};
 
 ble_custom_service_t m_estc_service = {
     .base_service_uuid.uuid128 = CUSTOM_BASE_UUID,
@@ -173,31 +186,18 @@ ret_code_t custom_ble_notify_message(char const *data)
 {
     ret_code_t ret = NRF_SUCCESS;
 
-    NRF_LOG_INFO("MUST BE NOTIFIED OF ERROR");
-    // TODO: Requires to be analyzed and corrected
-    // uint16_t len = strlen(data);
-    // uint8_t message[len];
-    // memcpy(message, data, len);
+    uint16_t len = strlen(data);
+    memset(g_char3_val, 0, sizeof(g_char3_val));
+    memcpy(g_char3_val, data, len);
+    char3.val_len = len;
 
-    // ble_gatts_value_t p_val = {
-    //     .len = len,
-    //     .p_value = message
-    // };
+    uint16_t type = BLE_GATT_HVX_INVALID;
 
-    // sd_ble_gatts_value_set(m_conn_handle, char2.char_handles.value_handle, &p_val);
+    ret = custom_ble_get_cccd(m_conn_handle, &char2, &type);
 
-    // uint16_t type = BLE_GATT_HVX_INVALID;
-
-    // ret = custom_ble_get_cccd(m_conn_handle, &char2, &type);
-
-    // if(NRF_SUCCESS == ret && BLE_GATT_HVX_INVALID != type) {
-    //     custom_ble_send_characteristic_value(m_conn_handle, &char2, type);
-    // };
-
-    // p_val.len = char2.val_len;
-    // p_val.p_value = char2.value;
-
-    // sd_ble_gatts_value_set(m_conn_handle, char2.char_handles.value_handle, &p_val);
+    if(NRF_SUCCESS == ret && BLE_GATT_HVX_INVALID != type) {
+        custom_ble_send_characteristic_value(m_conn_handle, &char3, type);
+    };
 
     return ret;
 }
@@ -216,11 +216,6 @@ ret_code_t custom_ble_notify_message(char const *data)
  */
 void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 {
-    while(1) {
-        // NRF_LOG_INFO("%d : %s", line_num, p_file_name);
-        // LOG_BACKEND_USB_PROCESS();
-        // NRF_LOG_PROCESS();
-    };
     app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
 
@@ -350,28 +345,6 @@ static void conn_params_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-
-/**@brief Function for putting the chip into sleep mode.
- *
- * @note This function will not return.
- */
-static void sleep_mode_enter(void)
-{
-    // ret_code_t err_code;
-
-    // err_code = bsp_indication_set(BSP_INDICATE_IDLE);
-    // APP_ERROR_CHECK(err_code);
-
-    // // Prepare wakeup buttons.
-    // err_code = bsp_btn_ble_sleep_mode_prepare();
-    // APP_ERROR_CHECK(err_code);
-
-    // // Go to system-off mode (this function will not return; wakeup will cause a reset).
-    // err_code = sd_power_system_off();
-    // APP_ERROR_CHECK(err_code);
-}
-
-
 /**@brief Function for handling advertising events.
  *
  * @details This function will be called for advertising events which are passed to the application.
@@ -392,7 +365,6 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 
         case BLE_ADV_EVT_IDLE:
             NRF_LOG_INFO("ADV Event: idle, no connectable advertising is ongoing");
-            sleep_mode_enter();
             break;
 
         default:
@@ -477,7 +449,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
         case BLE_GATTS_EVT_HVN_TX_COMPLETE:
             NRF_LOG_INFO("BLE_GATTS_EVT_HVN_TX_COMPLETE");
-            // TODO: Notification transmission complete
             break; 
 
         case BLE_GATTS_EVT_HVC:
@@ -521,8 +492,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             break;
 
         default:
-            NRF_LOG_INFO("default: %x", p_ble_evt->header.evt_id);
-            // No implementation needed.
             break;
     }
 }
@@ -531,8 +500,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
  *
  * @details Initializes the SoftDevice and the BLE event interrupt.
  */
-
-
 static void ble_stack_init(void)
 {
     ret_code_t err_code;
@@ -566,7 +533,6 @@ static void advertising_init(void)
     init.advdata.name_type               = BLE_ADVDATA_FULL_NAME;
     init.advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
 
-    // TODO: 8. Consider moving the device characteristics to the Scan Response if necessary
     init.advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
     init.advdata.uuids_complete.p_uuids  = m_adv_uuids;
 
@@ -602,26 +568,37 @@ static void pm_evt_handler(pm_evt_t const * p_evt)
 
     NRF_LOG_INFO("PM_EVT: %x", p_evt->evt_id);
 
-    switch (p_evt->evt_id) {
+    switch(p_evt->evt_id)
+    {
         case PM_EVT_BONDED_PEER_CONNECTED:
-            NRF_LOG_INFO("PM_EVT_BONDED_PEER_CONNECTED");
-            break;
+        case PM_EVT_CONN_SEC_START:
+        case PM_EVT_CONN_SEC_SUCCEEDED:
+        case PM_EVT_CONN_SEC_FAILED:
+        case PM_EVT_CONN_SEC_CONFIG_REQ:
+        case PM_EVT_STORAGE_FULL:
+        case PM_EVT_ERROR_UNEXPECTED:
+        case PM_EVT_PEER_DATA_UPDATE_SUCCEEDED:
+        case PM_EVT_PEER_DATA_UPDATE_FAILED:
+        case PM_EVT_PEER_DELETE_SUCCEEDED:
+        case PM_EVT_PEER_DELETE_FAILED:
+        case PM_EVT_PEERS_DELETE_SUCCEEDED:
+        case PM_EVT_PEERS_DELETE_FAILED:
+        case PM_EVT_LOCAL_DB_CACHE_APPLIED:
+        case PM_EVT_LOCAL_DB_CACHE_APPLY_FAILED:
+        case PM_EVT_SERVICE_CHANGED_IND_SENT:
+        case PM_EVT_SERVICE_CHANGED_IND_CONFIRMED:
         default:
             break;
     }
 }
 
-static void peer_manager_init(bool erase_bonds)
+static void peer_manager_init(void)
 {
     ret_code_t ret;
     ble_gap_sec_params_t sec_param;
 
     ret = pm_init();
     APP_ERROR_CHECK(ret);
-
-    if(erase_bonds) {
-        pm_peers_delete();
-    }
 
     memset(&sec_param, 0, sizeof(sec_param));
 
@@ -645,6 +622,11 @@ static void peer_manager_init(bool erase_bonds)
     APP_ERROR_CHECK(ret);
 }
 
+void custom_ble_delete_peers(void)
+{
+    pm_peers_delete();
+}
+
 
 void custom_ble_init(custom_hsv_t *color, custom_cb_ble_write_data_t custom_ble_write_data_cb)
 {
@@ -659,7 +641,7 @@ void custom_ble_init(custom_hsv_t *color, custom_cb_ble_write_data_t custom_ble_
     services_init();
     advertising_init();
     conn_params_init();
-    peer_manager_init(true);
+    peer_manager_init();
     custom_ble_advertising_start();
 }
 
