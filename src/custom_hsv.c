@@ -1,8 +1,10 @@
 #include <math.h>
+#include "custom_log.h"
 #include "custom_hsv.h"
 
-#define MAX(a, b) ((a > b) ? a : b)
-#define MIN(a, b) ((a < b) ? a : b)
+
+// #define MAX(a, b) ((a > b) ? a : b)
+// #define MIN(a, b) ((a < b) ? a : b)
 
 void custom_rgb_to_hsv(custom_hsv_t *hsv, const uint8_t red, const uint8_t green, const uint8_t blue)
 {
@@ -95,13 +97,19 @@ void custom_hsv_hue_change_by_one(custom_hsv_t *color)
 void custom_hsv_saturation_change_by_one(custom_hsv_ctx_t *context)
 {
     if(context->satur_is_forward) {
-        if(MAX_SATURATION <= ++context->color.saturation) {
+        if(MAX_SATURATION <= context->color.saturation) {
             context->satur_is_forward = false;
+        }
+        else {
+            ++context->color.saturation;
         }
     }
     else {
-        if(0 >= --context->color.saturation) {
+        if(0 >= context->color.saturation) {
             context->satur_is_forward = true;
+        }
+        else {
+            --context->color.saturation;
         }
     }
 }
@@ -109,13 +117,19 @@ void custom_hsv_saturation_change_by_one(custom_hsv_ctx_t *context)
 void custom_hsv_value_change_by_one(custom_hsv_ctx_t *context)
 {    
     if(context->value_is_forward) {
-        if(MAX_SATURATION <= ++context->color.value) {
+        if(MAX_BRIGHTNESS <= context->color.value) {
             context->value_is_forward = false;
+        }
+        else {
+            ++context->color.value;
         }
     }
     else {
-        if(0 >= --context->color.value) {
+        if(0 >= context->color.value) {
             context->value_is_forward = true;
+        }
+        else {
+            --context->color.value;
         }
     }          
 }
