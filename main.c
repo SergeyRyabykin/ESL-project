@@ -8,7 +8,8 @@
 #include "custom_app.h"
 #include "custom_hsv.h"
 #include "custom_log.h"
-#include "custom_record.h"
+// #include "custom_record.h"
+#include "custom_nvm.h"
 #include "custom_app_defines.h"
 #include "custom_app_types.h"
 #include "custom_cmd_list.h"
@@ -155,6 +156,16 @@ void custom_ble_change_color(void *cmd_str)
     }
 }
 
+ret_code_t custom_color_update_default(void)
+{
+    ret_code_t ret = custom_nvm_save(&g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color), DEFAULT_HSV_COLOR_ID);
+    if(NRF_SUCCESS ==  ret) {
+        ret = custom_nvm_discard_by_id(DEFAULT_HSV_COLOR_ID);
+    } 
+
+    return ret;
+}
+
 int main(void)
 {
     uint32_t ret = 0;
@@ -167,14 +178,17 @@ int main(void)
     custom_button_pin_config(CUSTOM_BUTTON);
 
     custom_ble_init(&g_custom_hsv_ctx.color, custom_ble_change_color);
-    ret = custom_record_storage_init();
+    ret = custom_fstore_init();
     APP_ERROR_CHECK(ret);
+    // ret = custom_record_storage_init();
+    // APP_ERROR_CHECK(ret);
 
     // To erase user app non-volatile memory
     if(custom_button_is_pressed(CUSTOM_BUTTON)) {
-        custom_ble_delete_peers();
-        ret = custom_record_erase(FILE_ID);
+        ret = custom_nvm_erase();
         APP_ERROR_CHECK(ret);
+        custom_ble_delete_peers();
+        // ret = custom_record_erase(FILE_ID);
 
         while(custom_button_is_pressed(CUSTOM_BUTTON)) {
             ;
@@ -194,11 +208,24 @@ int main(void)
     ret = custom_button_event_enable(CUSTOM_BUTTON, &g_gpiote_cfg);
     APP_ERROR_CHECK(ret);
 
-    ret = custom_record_read(&default_record, &g_custom_hsv_ctx.color);
-    APP_ERROR_CHECK(ret);
+    // ret = custom_record_read(&default_record, &g_custom_hsv_ctx.color);
+    // APP_ERROR_CHECK(ret);
 
-    if(NRF_SUCCESS != ret) {
-        ret = custom_record_save(&default_record, &g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
+    // if(NRF_SUCCESS != ret) {
+    //     ret = custom_record_save(&default_record, &g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
+    //     APP_ERROR_CHECK(ret);
+    // }
+
+    uintptr_t saved_object = custom_nvm_find(DEFAULT_HSV_COLOR_ID);
+    if(saved_object) {
+        NRF_LOG_INFO("Fstore found: %p", saved_object);
+        g_custom_hsv_ctx.color.hue = ((custom_hsv_t *)saved_object)->hue;
+        g_custom_hsv_ctx.color.saturation = ((custom_hsv_t *)saved_object)->saturation;
+        g_custom_hsv_ctx.color.value = ((custom_hsv_t *)saved_object)->value;
+    }
+    else {
+        ret = custom_nvm_save(&g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color), DEFAULT_HSV_COLOR_ID);
+        NRF_LOG_INFO("Fstore save: %x", ret);
         APP_ERROR_CHECK(ret);
     }
 
@@ -230,7 +257,9 @@ int main(void)
         }
 
         if(g_default_must_be_updated) {
-            ret_code_t ret = custom_record_update(&default_record, &g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
+            // ret_code_t ret = custom_record_update(&default_record, &g_custom_hsv_ctx.color, sizeof(g_custom_hsv_ctx.color));
+            ret_code_t ret = custom_color_update_default();
+            NRF_LOG_INFO("Fstore update: %x", ret);
             APP_ERROR_CHECK(ret);
             g_default_must_be_updated = false;
         }
