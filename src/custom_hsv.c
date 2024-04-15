@@ -1,10 +1,6 @@
 #include <math.h>
-#include "custom_log.h"
 #include "custom_hsv.h"
-
-
-// #define MAX(a, b) ((a > b) ? a : b)
-// #define MIN(a, b) ((a < b) ? a : b)
+#include "custom_app_defines.h"
 
 void custom_rgb_to_hsv(custom_hsv_t *hsv, const uint8_t red, const uint8_t green, const uint8_t blue)
 {
@@ -132,4 +128,14 @@ void custom_hsv_value_change_by_one(custom_hsv_ctx_t *context)
             --context->color.value;
         }
     }          
+}
+
+
+void custom_hsv_apply_color(custom_hsv_t *hsv_color, nrf_pwm_values_individual_t *pwm_values)
+{
+    uint8_t r, g, b;
+    custom_hsv_to_rgb(hsv_color, &r, &g, &b);
+    pwm_values->channel_1 = CUSTOM_RGB_STEP * r;
+    pwm_values->channel_2 = CUSTOM_RGB_STEP * g;
+    pwm_values->channel_3 = CUSTOM_RGB_STEP * b;
 }
