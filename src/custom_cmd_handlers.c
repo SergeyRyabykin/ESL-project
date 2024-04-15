@@ -90,11 +90,7 @@ ret_code_t custom_cmd_hsv_handler(char *str,  void *context)
     app_ctx->custom_hsv_ctx->color.saturation = cmd_args[1];
     app_ctx->custom_hsv_ctx->color.value = cmd_args[2];
 
-    uint8_t r, g, b;
-    custom_hsv_to_rgb(&app_ctx->custom_hsv_ctx->color, &r, &g, &b);
-    app_ctx->pwm_values->channel_1 = CUSTOM_RGB_STEP * r;
-    app_ctx->pwm_values->channel_2 = CUSTOM_RGB_STEP * g;
-    app_ctx->pwm_values->channel_3 = CUSTOM_RGB_STEP * b;
+    custom_hsv_apply_color(&app_ctx->custom_hsv_ctx->color, app_ctx->pwm_values);
 
     if(app_ctx->custom_app_callback){
         app_ctx->custom_app_callback(NULL);
@@ -131,7 +127,6 @@ ret_code_t custom_cmd_rgb_handler(char *str, void *context)
     if(3 != arg_cnt) {
         return NRF_ERROR_INVALID_PARAM;
     }
-
 
     app_ctx->pwm_values->channel_1 = CUSTOM_RGB_STEP * cmd_args[0];
     app_ctx->pwm_values->channel_2 = CUSTOM_RGB_STEP * cmd_args[1];
@@ -208,7 +203,6 @@ ret_code_t custom_cmd_add_rgb_color_handler(char *str, void *context)
 
         arg_cnt++;
     }
-   
 
     if(4 != arg_cnt) {
         return NRF_ERROR_INVALID_PARAM;
@@ -345,11 +339,7 @@ ret_code_t custom_cmd_apply_color_handler(char *str, void *context)
         app_ctx->custom_hsv_ctx->color.saturation = ((custom_saved_color_t *)object)->color.saturation;
         app_ctx->custom_hsv_ctx->color.value = ((custom_saved_color_t *)object)->color.value;
     
-        uint8_t r, g, b;
-        custom_hsv_to_rgb(&app_ctx->custom_hsv_ctx->color, &r, &g, &b);
-        app_ctx->pwm_values->channel_1 = CUSTOM_RGB_STEP * r;
-        app_ctx->pwm_values->channel_2 = CUSTOM_RGB_STEP * g;
-        app_ctx->pwm_values->channel_3 = CUSTOM_RGB_STEP * b;
+        custom_hsv_apply_color(&app_ctx->custom_hsv_ctx->color, app_ctx->pwm_values);
 
         if(app_ctx->custom_app_callback){
             app_ctx->custom_app_callback(NULL);

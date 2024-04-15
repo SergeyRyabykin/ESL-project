@@ -128,11 +128,7 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
             default: break;
         }
 
-        uint8_t r, g, b;
-        custom_hsv_to_rgb(&g_custom_hsv_ctx.color, &r, &g, &b);
-        g_pwm_values.channel_1 = CUSTOM_RGB_STEP * r;
-        g_pwm_values.channel_2 = CUSTOM_RGB_STEP * g;
-        g_pwm_values.channel_3 = CUSTOM_RGB_STEP * b;
+        custom_hsv_apply_color(&g_custom_hsv_ctx.color, &g_pwm_values);
     }
 
     if(SINGLE_CLICK_RELEASED == custom_button_get_state(CUSTOM_BUTTON) && !custom_button_is_processed(CUSTOM_BUTTON)) {
@@ -150,7 +146,6 @@ void custom_ble_change_color(void *cmd_str)
         ret_code_t ret = custom_cmd_get_cmd_executor(g_custom_app_ble_ctx.executor_ctx, cmd_str, &g_custom_ble_cmd_ctx, &g_custom_app_ble_ctx);
         if(NRF_SUCCESS != ret) {
             g_custom_app_ble_ctx.custom_print_output("Unknown command\n\r");
-            NRF_LOG_INFO("UNKNOWN COMMAND");
         }
     }
 }
@@ -202,11 +197,7 @@ int main(void)
         APP_ERROR_CHECK(ret);
     }
 
-    uint8_t r, g, b;
-    custom_hsv_to_rgb(&g_custom_hsv_ctx.color, &r, &g, &b);
-    g_pwm_values.channel_1 = CUSTOM_RGB_STEP * r;
-    g_pwm_values.channel_2 = CUSTOM_RGB_STEP * g;
-    g_pwm_values.channel_3 = CUSTOM_RGB_STEP * b;
+    custom_hsv_apply_color(&g_custom_hsv_ctx.color, &g_pwm_values);
 
     ret = nrfx_pwm_init(&g_pwm_inst, &g_pwm_config, custom_pwm_event_handler);
     APP_ERROR_CHECK(ret);
@@ -221,7 +212,6 @@ int main(void)
             custom_app_ctx_t *ctx_ptr = (custom_app_ctx_t*)(g_executor_ctx.context);
             if(NRF_SUCCESS != ret) {
                 ctx_ptr->custom_print_output("Arguments error\n\r");
-                NRF_LOG_INFO("ARGUMENTS_ERROR");
             }
             else {
                 ctx_ptr->custom_print_output("Success\n\r");
