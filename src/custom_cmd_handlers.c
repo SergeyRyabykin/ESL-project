@@ -210,7 +210,13 @@ ret_code_t custom_cmd_add_rgb_color_handler(char *str, void *context)
 
     custom_rgb_to_hsv( &object.color, cmd_args[0], cmd_args[1], cmd_args[2]);
 
-    return custom_record_save(&g_saved_record, &object, sizeof(object));
+    NRF_LOG_INFO("Before record_save - MSP: %p, PSP: %p", __get_MSP(), __get_PSP());
+
+    ret_code_t ret = custom_record_save(&g_saved_record, &object, sizeof(object));
+    NRF_LOG_INFO("After record_save - MSP: %p, PSP: %p", __get_MSP(), __get_PSP());
+
+    return ret;
+
 }
 
 ret_code_t custom_cmd_add_hsv_color_handler(char *str, void *context)
