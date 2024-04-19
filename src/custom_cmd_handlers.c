@@ -151,9 +151,7 @@ ret_code_t custom_cmd_save_handler(char *str, void *context)
         return NRF_ERROR_INVALID_PARAM;
     }
 
-    ret_code_t ret = custom_record_update(app_ctx->default_record, &app_ctx->custom_hsv_ctx->color, sizeof(app_ctx->custom_hsv_ctx->color));
-
-    return ret;
+    return custom_record_update(app_ctx->default_record, &app_ctx->custom_hsv_ctx->color, sizeof(app_ctx->custom_hsv_ctx->color));
 }
 
 ret_code_t custom_cmd_help_handler(char *str, void *context)

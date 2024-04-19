@@ -1,12 +1,9 @@
 #include "custom_record.h"
 #include <string.h>
 
-#define CUSTOM_PAYLOAD_SIZE_W 50
 #define SIZE_IN_WORDS(size_in_bytes) (size_in_bytes / sizeof(uint32_t) + ((size_in_bytes % sizeof(uint32_t)) ? 1 : 0))
 
 static volatile bool is_complete = false;
-static uint32_t payload[CUSTOM_PAYLOAD_SIZE_W];
-
 
 static inline void wait_for_complete(void)
 {
@@ -20,12 +17,23 @@ static void custom_fds_evt_handler(fds_evt_t const *p_fds_evt)
 {
     switch (p_fds_evt->id) {
         case FDS_EVT_INIT:
+            is_complete = true;
+            break;
         case FDS_EVT_WRITE:
         case FDS_EVT_UPDATE:
+            if(FILE_ID == p_fds_evt->write.file_id) {
+                is_complete = true;
+            }
+            break;
         case FDS_EVT_DEL_RECORD:
         case FDS_EVT_DEL_FILE:
+            if(FILE_ID == p_fds_evt->del.file_id) {
+                is_complete = true;
+            }
+            break;
         case FDS_EVT_GC:
             is_complete = true;
+            break;
         default:
             break;
     }
@@ -49,9 +57,7 @@ ret_code_t custom_record_storage_init(void)
 
 ret_code_t custom_record_save(custom_record_t *record, void const *src_ptr, size_t size_bytes)
 {
-    if(CUSTOM_PAYLOAD_SIZE_W < SIZE_IN_WORDS(size_bytes)) {
-        return NRF_ERROR_DATA_SIZE;
-    }
+    uint32_t payload[SIZE_IN_WORDS(size_bytes)];
 
     memcpy(payload, src_ptr, size_bytes);
 
@@ -107,13 +113,11 @@ ret_code_t custom_record_read_iterate(custom_record_t * const record, void *dest
 
 ret_code_t custom_record_update(custom_record_t * const record, void const *src_ptr, size_t size_bytes)
 {
-    if(CUSTOM_PAYLOAD_SIZE_W < SIZE_IN_WORDS(size_bytes)) {
-        return NRF_ERROR_DATA_SIZE;
-    }
-
     memset(&record->ftok, 0x00, sizeof(fds_find_token_t));
 
     ret_code_t ret = fds_record_find(record->record.file_id, record->record.key, &record->record_desc, &record->ftok);
+
+    uint32_t payload[SIZE_IN_WORDS(size_bytes)];
 
     memcpy(payload, src_ptr, size_bytes);
 

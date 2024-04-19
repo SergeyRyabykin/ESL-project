@@ -384,7 +384,6 @@ static ret_code_t custom_ble_erase_gatts_value(uint16_t conn_handle, uint16_t va
         uint8_t array[val.len];
         memset(array, 0, val.len);
         val.p_value = array;
-        NRF_LOG_INFO("Erasing length: %d", val.len);
         err_code = sd_ble_gatts_value_set(m_conn_handle, char1.char_handles.value_handle, &val);
     }
 
@@ -448,12 +447,9 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             break;
 
         case BLE_GATTS_EVT_HVN_TX_COMPLETE:
-            NRF_LOG_INFO("BLE_GATTS_EVT_HVN_TX_COMPLETE");
             break; 
 
         case BLE_GATTS_EVT_HVC:
-            NRF_LOG_INFO("BLE_GATTS_EVT_HVC");
-
             if(!custom_vptr_queue_is_empty(&indication_queue)){
                 process_indication_queue();
             }
@@ -463,15 +459,13 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
             break;
 
-        case BLE_GATTS_EVT_WRITE:
-            NRF_LOG_INFO("BLE_GATTS_EVT_WRITE");
-
+        case BLE_GATTS_EVT_WRITE: ;
             ble_gatts_value_t r_val = {
                 .len = 0,
                 .p_value = NULL
             };
-
             memset(g_char1_val, 0, sizeof(g_char1_val));
+            
 
             err_code = sd_ble_gatts_value_get(m_conn_handle, char1.char_handles.value_handle, &r_val);
             if(NRF_SUCCESS == err_code) {
@@ -480,15 +474,11 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             }
 
             if(NRF_SUCCESS == err_code) {
-                NRF_LOG_INFO("WRITEN_VALUE: %s", g_char1_val);
                 func_cb(g_char1_val);
             }
 
             err_code = custom_ble_erase_gatts_value(m_conn_handle, char1.char_handles.value_handle);
-
-            if(NRF_SUCCESS != err_code) {
-                NRF_LOG_INFO("VAL ERASING ERROR");
-            }
+            APP_ERROR_CHECK(err_code);
             break;
 
         default:
@@ -565,8 +555,6 @@ static void pm_evt_handler(pm_evt_t const * p_evt)
     pm_handler_on_pm_evt(p_evt);
     pm_handler_disconnect_on_sec_failure(p_evt);
     pm_handler_flash_clean(p_evt);
-
-    NRF_LOG_INFO("PM_EVT: %x", p_evt->evt_id);
 
     switch(p_evt->evt_id)
     {
