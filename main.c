@@ -142,7 +142,6 @@ void custom_pwm_event_handler(nrfx_pwm_evt_type_t event_type)
 void custom_ble_change_color(void *cmd_str)
 {
     if(strlen(cmd_str)) {
-        NRF_LOG_INFO("%s", cmd_str);
         ret_code_t ret = custom_cmd_get_cmd_executor(g_custom_app_ble_ctx.executor_ctx, cmd_str, &g_custom_ble_cmd_ctx, &g_custom_app_ble_ctx);
         if(NRF_SUCCESS != ret) {
             g_custom_app_ble_ctx.custom_print_output("Unknown command\n\r");
@@ -204,6 +203,7 @@ int main(void)
     nrfx_pwm_simple_playback(&g_pwm_inst, &g_pwm_sequence, PWM_PLAYBACK_COUNT, NRFX_PWM_FLAG_LOOP);
 
     notify_color_changed(NULL);
+
 
     while(true) {
 

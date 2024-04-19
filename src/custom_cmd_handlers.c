@@ -151,9 +151,7 @@ ret_code_t custom_cmd_save_handler(char *str, void *context)
         return NRF_ERROR_INVALID_PARAM;
     }
 
-    ret_code_t ret = custom_record_update(app_ctx->default_record, &app_ctx->custom_hsv_ctx->color, sizeof(app_ctx->custom_hsv_ctx->color));
-
-    return ret;
+    return custom_record_update(app_ctx->default_record, &app_ctx->custom_hsv_ctx->color, sizeof(app_ctx->custom_hsv_ctx->color));
 }
 
 ret_code_t custom_cmd_help_handler(char *str, void *context)
@@ -210,13 +208,7 @@ ret_code_t custom_cmd_add_rgb_color_handler(char *str, void *context)
 
     custom_rgb_to_hsv( &object.color, cmd_args[0], cmd_args[1], cmd_args[2]);
 
-    NRF_LOG_INFO("Before record_save - MSP: %p, PSP: %p", __get_MSP(), __get_PSP());
-
-    ret_code_t ret = custom_record_save(&g_saved_record, &object, sizeof(object));
-    NRF_LOG_INFO("After record_save - MSP: %p, PSP: %p", __get_MSP(), __get_PSP());
-
-    return ret;
-
+    return custom_record_save(&g_saved_record, &object, sizeof(object));
 }
 
 ret_code_t custom_cmd_add_hsv_color_handler(char *str, void *context)
