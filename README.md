@@ -6,7 +6,11 @@ The purpose of the application is to control parameters of RGB led such as hue, 
 <br />When the application enters default mode the color is saved into non volatile memory and will be implemented as default color (This led state will be implemented after power on or reset).
 2. BLE
   <br />There are three characteristics:
-  - The first is write only. The led state might be changed through writing an appropriate command to this characteristic: RGB <red> <green> <blue> or HSV <hue> <saturation> <value>. To save the led state to NVM the 'save' command might be implemented. The commands must be in the text format.
+  - The first is write only. The led state might be changed through writing an appropriate command to this characteristic:
+    <br />  RGB \<red> \<green> \<blue>
+    <br />  HSV \<hue> \<saturation> \<value>
+    <br />  save - to save the led state into NVM and use it as default state.
+    <br />The commands must be in the text format.
   - The second is read only. The led state in HSV format is shown in this characteristic. It updates the actual state info each time the parameters of the color are changed.
   - The third is also read only. The applied command result is shown in this one (Success, Unknown command or Arguments error).
 3. USB CLI
