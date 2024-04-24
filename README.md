@@ -3,7 +3,7 @@ The purpose of the application is to control parameters of RGB led such as hue, 
 1. Button
   - Double click changes a parameter. The auxiliary led indicates the current parameter to be changed: slow blinking - hue, fast blinking - saturation, always on - value and always off - default mode(no parameter).
   - Keeping the button pressed changes the parameter value.
-<br />When the application enters default mode the color is saved to non volatile memory and will be implemented as default color (This led state will be set after power on or reset).
+<br />When the application enters default mode the color is saved into non volatile memory and will be implemented as default color (This led state will be implemented after power on or reset).
 2. BLE
   <br />There are three characteristics:
   - The first is write only. The led state might be changed through writing an appropriate command to this characteristic: RGB <red> <green> <blue> or HSV <hue> <saturation> <value>. To save the led state to NVM the 'save' command might be implemented. The commands must be in the text format.
