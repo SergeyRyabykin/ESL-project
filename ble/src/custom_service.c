@@ -11,16 +11,6 @@
 
 #define CCCD_VALUE_LENGTH 2
 
-
-
-
-
-
-
-
-
-
-
 static ret_code_t estc_ble_add_characteristics(ble_custom_service_t *service);
 
 ret_code_t custom_ble_service_init(ble_custom_service_t *service)
@@ -39,9 +29,6 @@ ret_code_t custom_ble_service_init(ble_custom_service_t *service)
 
     error_code = estc_ble_add_characteristics(service);
 
-    // NRF_LOG_DEBUG("%s:%d | Service UUID: 0x%04x", __FUNCTION__, __LINE__, service_uuid.uuid);
-    // NRF_LOG_DEBUG("%s:%d | Service UUID type: 0x%02x", __FUNCTION__, __LINE__, service_uuid.type);
-    // NRF_LOG_DEBUG("%s:%d | Service handle: 0x%04x", __FUNCTION__, __LINE__, service->service_handle);
     return error_code;
 }
 
