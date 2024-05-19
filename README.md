@@ -20,3 +20,4 @@ The purpose of the application is to control parameters of RGB led such as hue, 
 3. USB CLI
   <br />This extension can be included into the application with 'ESTC_USB_CLI_ENABLED=1' parameter added to MAKE invocation. 
   <br />The easiest way to learn all the available commands is to implement 'help' command in the CLI terminal.
+Also there is possibility to clear all the peers and saved colors. To do that the button must be pressed befor and hold some time after power up the board.
